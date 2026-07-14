@@ -1,0 +1,27 @@
+.hidden {
+  display: none !important;
+}
+
+.text-12 {
+  font-size: 12px;
+}
+
+.mt-0 {
+  margin-top: 0;
+}
+
+.mt-8 {
+  margin-top: 8px;
+}
+
+.mb-8 {
+  margin-bottom: 8px;
+}
+
+.my-0-mt-9 {
+  margin: 9px 0 0;
+}
+
+.flex-1 {
+  flex: 1;
+}

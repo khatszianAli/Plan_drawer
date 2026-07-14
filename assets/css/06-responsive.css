@@ -1,0 +1,25 @@
+@media (max-width: 920px) {
+  .main {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: absolute;
+    top: 55px;
+    right: 0;
+    bottom: 28px;
+    z-index: 30;
+    width: min(340px, 92vw);
+    box-shadow: var(--shadow);
+    transform: translateX(100%);
+    transition: 0.2s ease;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .toolbar-group:last-child {
+    margin-left: 0;
+  }
+}

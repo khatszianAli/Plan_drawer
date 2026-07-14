@@ -1,0 +1,26 @@
+:root {
+  --color-page: #f4f7fb;
+  --color-surface: #ffffff;
+  --color-border: #dbe3ee;
+  --color-text: #172033;
+  --color-muted: #667085;
+  --color-primary: #2563eb;
+  --color-primary-soft: #eff6ff;
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
+  --color-warning: #f59e0b;
+  --shadow-floating: 0 12px 35px rgba(15, 23, 42, 0.12);
+
+  /* Backward-compatible aliases used by the current UI. */
+  --bg: var(--color-page);
+  --panel: var(--color-surface);
+  --border: var(--color-border);
+  --text: var(--color-text);
+  --muted: var(--color-muted);
+  --blue: var(--color-primary);
+  --blue-soft: var(--color-primary-soft);
+  --green: var(--color-success);
+  --red: var(--color-danger);
+  --orange: var(--color-warning);
+  --shadow: var(--shadow-floating);
+}

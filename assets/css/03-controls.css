@@ -1,0 +1,142 @@
+.btn {
+  min-height: 34px;
+  padding: 8px 11px;
+  color: #344054;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: 0.15s ease;
+}
+
+.btn:hover {
+  background: #f8fafc;
+  border-color: #b9c5d5;
+}
+
+.btn.active,
+.btn.primary {
+  color: #fff;
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+.btn.active:hover,
+.btn.primary:hover {
+  background: #1d4ed8;
+}
+
+.btn.success {
+  color: #fff;
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.btn.danger {
+  color: var(--red);
+  background: #fff5f5;
+  border-color: #fecaca;
+}
+
+.btn.icon {
+  min-width: 34px;
+  padding: 8px;
+}
+
+.mini-btn {
+  padding: 7px 9px;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 700;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.mini-btn:hover {
+  background: #f8fafc;
+}
+
+.mini-btn.primary {
+  color: #fff;
+  background: var(--blue);
+  border-color: var(--blue);
+}
+
+.mini-btn.danger {
+  color: var(--red);
+  background: #fff5f5;
+  border-color: #fecaca;
+}
+
+.mini-btn.full,
+.range {
+  width: 100%;
+}
+
+.field {
+  display: block;
+  margin-bottom: 9px;
+}
+
+.field > span {
+  display: block;
+  margin-bottom: 4px;
+  color: #475467;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  padding: 7px 8px;
+  color: #172033;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: var(--blue);
+  outline: 2px solid #bfdbfe;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.row.wrap {
+  flex-wrap: wrap;
+}
+
+.row.between {
+  justify-content: space-between;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 7px 0;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+}

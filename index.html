@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Конструктор плана дома с физической толщиной стен, привязками и экспортом JSON."
+    />
+    <title>Конструктор плана дома — v3.11</title>
+
+    <!-- CSS is split by responsibility; order matters. -->
+    <link rel="stylesheet" href="assets/css/00-tokens.css" />
+    <link rel="stylesheet" href="assets/css/01-base.css" />
+    <link rel="stylesheet" href="assets/css/02-layout.css" />
+    <link rel="stylesheet" href="assets/css/03-controls.css" />
+    <link rel="stylesheet" href="assets/css/04-components.css" />
+    <link rel="stylesheet" href="assets/css/05-utilities.css" />
+    <link rel="stylesheet" href="assets/css/06-responsive.css" />
+  </head>
+
+  <body>
+    <div class="app">
+      <!-- Primary editor toolbar -->
+      <header class="toolbar" aria-label="Инструменты редактора">
+        <div class="toolbar-group" aria-label="Инструменты стен">
+          <button
+            id="btn-select"
+            class="btn"
+            data-mode="select"
+            title="Выбор (V)"
+          >
+            ↖ Выбор
+          </button>
+          <button
+            id="btn-normal"
+            class="btn active"
+            data-mode="draw-normal"
+            title="Обычная стена (N)"
+          >
+            ▰ Стена
+          </button>
+          <button
+            id="btn-veranda"
+            class="btn"
+            data-mode="draw-veranda"
+            title="Стена веранды (B)"
+          >
+            ┄ Веранда
+          </button>
+          <button
+            id="btn-wall-toggle"
+            class="btn"
+            data-action="toggle-wall-type"
+            title="Быстро сменить тип стены (Tab)"
+          >
+            Тип: обычная ↹
+          </button>
+        </div>
+
+        <div class="toolbar-group" aria-label="Геометрические фигуры">
+          <button
+            id="btn-rectangle"
+            class="btn"
+            data-mode="shape-rectangle"
+            title="Прямоугольник (R)"
+          >
+            ▭ Прямоугольник
+          </button>
+          <button
+            id="btn-square"
+            class="btn"
+            data-mode="shape-square"
+            title="Квадрат (Q)"
+          >
+            □ Квадрат
+          </button>
+          <button
+            id="btn-u-shape"
+            class="btn"
+            data-mode="shape-u"
+            title="П-образный контур (U)"
+          >
+            ⊔ П-форма
+          </button>
+          <button
+            id="btn-eraser"
+            class="btn danger"
+            data-mode="eraser"
+            title="Линейный ластик (E)"
+          >
+            ⌫ Ластик
+          </button>
+        </div>
+
+        <div class="toolbar-group" aria-label="Редактирование">
+          <button
+            id="btn-undo"
+            class="btn icon"
+            data-action="undo"
+            title="Отменить Ctrl+Z"
+          >
+            ↶
+          </button>
+          <button
+            id="btn-redo"
+            class="btn icon"
+            data-action="redo"
+            title="Повторить Ctrl+Y"
+          >
+            ↷
+          </button>
+          <button
+            class="btn"
+            data-action="duplicate-selection"
+            title="Дублировать Ctrl+D"
+          >
+            Дублировать
+          </button>
+          <button
+            class="btn"
+            data-action="merge-selection"
+            title="Объединить совместимые стены"
+          >
+            Объединить
+          </button>
+        </div>
+
+        <div class="toolbar-group" aria-label="Импорт и экспорт">
+          <button class="btn" data-action="open-json-import">
+            Импорт JSON
+          </button>
+          <input
+            id="json-input"
+            type="file"
+            accept="application/json,.json"
+            class="hidden"
+          />
+          <button class="btn success" data-action="export-json">
+            Экспорт JSON
+          </button>
+        </div>
+
+        <div class="toolbar-group" aria-label="План">
+          <button class="btn" data-action="fit-plan">Показать весь план</button>
+          <button class="btn danger" data-action="confirm-clear">
+            Очистить
+          </button>
+        </div>
+
+        <div class="toolbar-group">
+          <button class="btn" data-action="toggle-sidebar">Панель</button>
+        </div>
+      </header>
+
+      <main class="main">
+        <!-- Canvas workspace -->
+        <section
+          id="workspace"
+          class="workspace draw-cursor"
+          aria-label="Рабочая область плана"
+        >
+          <canvas id="planCanvas"></canvas>
+
+          <div id="smart-input" class="floating smart-input hidden">
+            <strong id="smart-input-label" class="text-12">Длина, мм:</strong>
+            <input
+              id="length-input"
+              type="number"
+              min="1"
+              step="1"
+              placeholder="например 5000"
+            />
+            <span class="muted">Enter</span>
+          </div>
+
+          <div id="workspace-hint" class="floating hint">
+            ЛКМ — рисование. Esc — завершить цепочку. ПКМ или Space + ЛКМ —
+            перемещение холста. Колесо — масштаб.
+          </div>
+
+          <div class="floating zoom-box" aria-label="Масштаб">
+            <button class="btn icon" data-action="zoom" data-factor="0.8">
+              −
+            </button>
+            <span id="zoom-value" class="zoom-value">100%</span>
+            <button class="btn icon" data-action="zoom" data-factor="1.25">
+              +
+            </button>
+            <button class="btn" data-action="reset-view">Сброс</button>
+          </div>
+        </section>
+
+        <!-- Properties sidebar -->
+        <aside id="sidebar" class="sidebar" aria-label="Параметры плана">
+          <section class="panel">
+            <div class="panel-title">
+              <span>Параметры построения</span>
+              <span id="build-settings-badge" class="badge">1 мм</span>
+            </div>
+            <div class="panel-body">
+              <div class="grid2">
+                <label class="field">
+                  <span>Шаг построения, мм</span>
+                  <input
+                    id="draw-step"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value="1"
+                  />
+                </label>
+                <label class="field">
+                  <span>Толщина всех стен, мм</span>
+                  <input
+                    id="default-thickness"
+                    type="number"
+                    min="150"
+                    max="150"
+                    step="1"
+                    value="150"
+                    disabled
+                  />
+                </label>
+              </div>
+              <button class="mini-btn full" disabled>
+                Толщина всех стен зафиксирована: 150 мм
+              </button>
+              <p class="muted my-0-mt-9">
+                Стена рассчитывается как физический прямоугольник толщиной 150
+                мм. Стыки привязываются к граням с учётом половины толщины — 75
+                мм.
+              </p>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">
+              <span>Свойства</span>
+              <span id="selection-badge" class="badge">0</span>
+            </div>
+
+            <div id="properties-empty" class="panel-body muted">
+              Выберите стену. Ctrl/⌘ + клик добавляет стены к выделению. Также
+              можно протянуть рамку по пустому месту.
+            </div>
+
+            <div id="properties-single" class="panel-body hidden">
+              <label class="field">
+                <span>ID</span>
+                <input id="prop-id" disabled />
+              </label>
+              <label class="field">
+                <span>Название</span>
+                <input id="prop-name" placeholder="Например: северная стена" />
+              </label>
+
+              <div class="grid2">
+                <label class="field"
+                  ><span>StartX, мм</span
+                  ><input id="prop-sx" type="number" step="1"
+                /></label>
+                <label class="field"
+                  ><span>StartY, мм</span
+                  ><input id="prop-sy" type="number" step="1"
+                /></label>
+                <label class="field"
+                  ><span>EndX, мм</span
+                  ><input id="prop-ex" type="number" step="1"
+                /></label>
+                <label class="field"
+                  ><span>EndY, мм</span
+                  ><input id="prop-ey" type="number" step="1"
+                /></label>
+              </div>
+
+              <div id="prop-length" class="metric">Длина: 0 мм</div>
+
+              <div class="grid2">
+                <label class="field">
+                  <span>Толщина, мм</span>
+                  <input
+                    id="prop-thickness"
+                    type="number"
+                    min="150"
+                    max="150"
+                    step="1"
+                    value="150"
+                    disabled
+                  />
+                </label>
+                <label class="field">
+                  <span>Тип</span>
+                  <select id="prop-type">
+                    <option value="normal">Обычная</option>
+                    <option value="veranda">Веранда</option>
+                  </select>
+                </label>
+              </div>
+
+              <label class="check">
+                <input id="prop-bearing" type="checkbox" />
+                Несущая стена
+              </label>
+
+              <div class="row">
+                <button
+                  class="mini-btn primary flex-1"
+                  data-action="save-wall-properties"
+                >
+                  Сохранить
+                </button>
+                <button class="mini-btn danger" data-action="delete-selection">
+                  Удалить
+                </button>
+              </div>
+            </div>
+
+            <div id="properties-multi" class="panel-body hidden">
+              <div id="multi-summary" class="metric"></div>
+              <label class="field">
+                <span>Толщина выбранных стен, мм</span>
+                <input
+                  id="multi-thickness"
+                  type="number"
+                  min="150"
+                  max="150"
+                  step="1"
+                  value="150"
+                  disabled
+                />
+              </label>
+              <button class="mini-btn full mb-8" disabled>
+                Толщина фиксирована: 150 мм
+              </button>
+
+              <div class="row wrap">
+                <button
+                  class="mini-btn"
+                  data-action="selection-type"
+                  data-value="normal"
+                >
+                  Обычные
+                </button>
+                <button
+                  class="mini-btn"
+                  data-action="selection-type"
+                  data-value="veranda"
+                >
+                  Веранда
+                </button>
+                <button
+                  class="mini-btn"
+                  data-action="selection-bearing"
+                  data-value="true"
+                >
+                  Несущие
+                </button>
+                <button
+                  class="mini-btn"
+                  data-action="selection-bearing"
+                  data-value="false"
+                >
+                  Ненесущие
+                </button>
+              </div>
+
+              <div class="row mt-8">
+                <button
+                  class="mini-btn flex-1"
+                  data-action="duplicate-selection"
+                >
+                  Дублировать
+                </button>
+                <button class="mini-btn danger" data-action="delete-selection">
+                  Удалить
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">
+              <span>Подложка плана</span>
+              <span id="background-badge" class="badge">нет</span>
+            </div>
+            <div class="panel-body">
+              <label class="file-label">
+                Загрузить PNG, JPG, WebP или SVG
+                <input
+                  id="background-input"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  class="hidden"
+                />
+              </label>
+
+              <label class="check">
+                <input id="background-visible" type="checkbox" checked />
+                Показывать подложку
+              </label>
+
+              <label class="field">
+                <span>Прозрачность: <b id="opacity-label">45%</b></span>
+                <input
+                  id="background-opacity"
+                  class="range"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value="45"
+                />
+              </label>
+
+              <div class="grid2">
+                <label class="field">
+                  <span>Ширина, мм</span>
+                  <input
+                    id="background-width"
+                    type="number"
+                    min="1"
+                    step="50"
+                    placeholder="—"
+                    disabled
+                  />
+                </label>
+                <label class="field">
+                  <span>Высота, мм</span>
+                  <input
+                    id="background-height"
+                    type="number"
+                    min="1"
+                    step="50"
+                    placeholder="—"
+                    disabled
+                  />
+                </label>
+              </div>
+
+              <label class="check">
+                <input id="background-lock-ratio" type="checkbox" checked />
+                Сохранять пропорции
+              </label>
+
+              <div class="row wrap mb-8">
+                <button
+                  class="mini-btn"
+                  data-action="scale-background"
+                  data-factor="0.9"
+                >
+                  −10%
+                </button>
+                <button
+                  class="mini-btn"
+                  data-action="scale-background"
+                  data-factor="1.1"
+                >
+                  +10%
+                </button>
+                <button class="mini-btn" data-action="fit-background">
+                  Вписать
+                </button>
+              </div>
+
+              <div class="row wrap">
+                <button
+                  id="btn-bg-move"
+                  class="mini-btn"
+                  data-action="toggle-background-move"
+                >
+                  Перемещать / размер
+                </button>
+                <button class="mini-btn" data-action="start-calibration">
+                  Калибровать
+                </button>
+                <button class="mini-btn danger" data-action="remove-background">
+                  Удалить
+                </button>
+              </div>
+
+              <p class="muted my-0-mt-9">
+                Размер задаётся числом или мышью. Для калибровки укажите две
+                точки известного расстояния и введите размер в миллиметрах.
+              </p>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">
+              <span>Проверка плана</span>
+              <span id="issues-badge" class="badge ok">0</span>
+            </div>
+            <div class="panel-body">
+              <div class="row mb-8">
+                <button
+                  class="mini-btn primary flex-1"
+                  data-action="validate-plan"
+                >
+                  Проверить
+                </button>
+                <button class="mini-btn" data-action="validate-joints">
+                  Проверить физические стыки
+                </button>
+              </div>
+              <div id="issues-empty" class="muted">Ошибок пока не найдено.</div>
+              <div id="issues-list" class="issues hidden"></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-title">
+              <span>Автосохранение</span>
+              <span id="save-badge" class="badge ok">вкл.</span>
+            </div>
+            <div class="panel-body">
+              <p class="muted mt-0">
+                Стены и настройки сохраняются в браузере после каждого
+                изменения. Большие изображения-подложки могут не сохраняться.
+              </p>
+              <div class="row">
+                <button class="mini-btn flex-1" data-action="save-local">
+                  Сохранить сейчас
+                </button>
+                <button class="mini-btn danger" data-action="clear-local">
+                  Удалить копию
+                </button>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </main>
+
+      <footer class="status" aria-label="Статус редактора">
+        <span id="status-coords">X: 0 мм · Y: 0 мм</span>
+        <span id="status-count">Стен: 0</span>
+        <span id="status-selected">Выбрано: 0</span>
+        <span id="status-mode">Режим: стена</span>
+        <span id="status-save">Не сохранено</span>
+      </footer>
+    </div>
+
+    <!-- Reusable modal -->
+    <div id="modal-backdrop" class="modal-backdrop hidden">
+      <div
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+      >
+        <h3 id="modal-title">Внимание</h3>
+        <p id="modal-message"></p>
+        <div id="modal-actions" class="modal-actions"></div>
+      </div>
+    </div>
+
+    <!--
+      Classic deferred scripts are used intentionally: the project continues to work
+      when index.html is opened directly via file:// without a local web server.
+    -->
+    <script defer src="assets/js/core/runtime.js"></script>
+    <script defer src="assets/js/geometry/wall-geometry.js"></script>
+    <script defer src="assets/js/model/walls.js"></script>
+    <script defer src="assets/js/canvas/coordinates.js"></script>
+    <script defer src="assets/js/editor/modes-and-shapes.js"></script>
+    <script defer src="assets/js/editor/eraser.js"></script>
+    <script defer src="assets/js/editor/history.js"></script>
+    <script defer src="assets/js/geometry/snapping.js"></script>
+    <script defer src="assets/js/editor/drawing.js"></script>
+    <script defer src="assets/js/editor/selection.js"></script>
+    <script defer src="assets/js/editor/validation.js"></script>
+    <script defer src="assets/js/canvas/viewport.js"></script>
+    <script defer src="assets/js/features/background.js"></script>
+    <script defer src="assets/js/features/io-and-storage.js"></script>
+    <script defer src="assets/js/ui/modal.js"></script>
+    <script defer src="assets/js/canvas/renderer.js"></script>
+    <script defer src="assets/js/app/events.js"></script>
+    <script defer src="assets/js/app/bootstrap.js"></script>
+  </body>
+</html>
