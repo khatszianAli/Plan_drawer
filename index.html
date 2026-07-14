@@ -462,6 +462,38 @@
                 </button>
               </div>
 
+              <div class="row wrap mb-8">
+                <button
+                  id="btn-bg-origin"
+                  class="mini-btn"
+                  data-action="background-to-origin"
+                  title="Совместить левый нижний угол подложки с координатой (0, 0)"
+                  disabled
+                >
+                  В точку 0,0
+                </button>
+                <button
+                  id="btn-bg-flip-x"
+                  class="mini-btn"
+                  data-action="flip-background"
+                  data-axis="x"
+                  aria-pressed="false"
+                  disabled
+                >
+                  Отразить ↔
+                </button>
+                <button
+                  id="btn-bg-flip-y"
+                  class="mini-btn"
+                  data-action="flip-background"
+                  data-axis="y"
+                  aria-pressed="false"
+                  disabled
+                >
+                  Отразить ↕
+                </button>
+              </div>
+
               <div class="row wrap">
                 <button
                   id="btn-bg-move"
@@ -481,6 +513,8 @@
               <p class="muted my-0-mt-9">
                 Размер задаётся числом или мышью. Для калибровки укажите две
                 точки известного расстояния и введите размер в миллиметрах.
+                Кнопка «В точку 0,0» совмещает с началом координат левый нижний
+                угол подложки.
               </p>
             </div>
           </section>

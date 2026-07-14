@@ -14,6 +14,9 @@ const SNAP_SCREEN_PX = 13;
 const HIT_SCREEN_PX = 10;
 const HANDLE_RADIUS = 7;
 const GAP_WARNING_MM = 100;
+// Любой зазор, который проверка считает небольшим, редактор старается закрыть
+// автоматически при завершении построения или изменения конца стены.
+const AUTO_JOIN_GAP_MM = GAP_WARNING_MM;
 const MIN_BACKGROUND_SIZE_MM = 50;
 const MAX_HISTORY = 100;
 const FIXED_WALL_THICKNESS = 150;
@@ -63,6 +66,8 @@ let background = {
   y: 0,
   width: 0,
   height: 0,
+  flipX: false,
+  flipY: false,
   moveMode: false,
 };
 const deepClone = (value) => JSON.parse(JSON.stringify(value));

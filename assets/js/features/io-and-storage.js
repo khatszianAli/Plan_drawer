@@ -76,7 +76,7 @@ function saveToLocalStorage(showResult = false) {
       ? mode
       : previousMode;
     const data = {
-      version: 4,
+      version: 5,
       walls: walls.map(cleanWallForStorage),
       view,
       settings: {
@@ -92,6 +92,8 @@ function saveToLocalStorage(showResult = false) {
         y: background.y,
         width: background.width,
         height: background.height,
+        flipX: Boolean(background.flipX),
+        flipY: Boolean(background.flipY),
         dataUrl: bgData,
       },
     };
@@ -142,13 +144,35 @@ function restoreAutosave() {
         mode = data.settings.mode;
     }
     if (Array.isArray(data.walls)) walls = data.walls.map(createWall);
+    const legacyFormat = Number(data.version) <= 4;
+    const repairedLegacyIds = new Set();
     walls.forEach((w) => {
       w.Thickness = FIXED_WALL_THICKNESS;
+      // В старой версии привязка иногда смещала только конечную точку на
+      // половину толщины и сохраняла диагональную стену. Исправляем именно
+      // этот небольшой служебный сдвиг при первом открытии нового формата.
+      if (legacyFormat && repairLegacySnappedWall(w))
+        repairedLegacyIds.add(w.Id);
     });
+    if (legacyFormat && repairedLegacyIds.size) {
+      walls = walls.filter(
+        (w) =>
+          !repairedLegacyIds.has(w.Id) ||
+          !walls.some(
+            (other) =>
+              other.Id !== w.Id &&
+              !repairedLegacyIds.has(other.Id) &&
+              wallsAreNearDuplicates(w, other),
+          ),
+      );
+    }
+    if (legacyFormat) walls.forEach((w) => repairLegacyWallJunctions(w));
     if (data.view && Number.isFinite(data.view.scale))
       view = { ...view, ...data.view };
     if (data.background) {
       background = { ...background, ...data.background };
+      background.flipX = Boolean(data.background.flipX);
+      background.flipY = Boolean(data.background.flipY);
       $("background-visible").checked = background.visible !== false;
       $("background-opacity").value = Math.round(
         (background.opacity ?? 0.45) * 100,

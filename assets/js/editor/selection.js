@@ -246,6 +246,18 @@ function updateWallDrag(p) {
 function endWallDrag() {
   if (!drag) return;
   if (drag.changed) {
+    if (drag.type === "handle") {
+      const w = wallById(drag.targetId);
+      if (w) autoJoinWallEndpoint(w, drag.handle);
+    } else if (drag.type === "walls") {
+      const excluded = new Set(drag.originals.keys());
+      for (const id of excluded) {
+        const w = wallById(id);
+        if (!w) continue;
+        autoJoinWallEndpoint(w, "start", excluded);
+        autoJoinWallEndpoint(w, "end", excluded);
+      }
+    }
     const selectedBefore = new Set(selectedIds);
     removeExactDuplicates();
     selectedIds = new Set([...selectedBefore].filter((id) => wallById(id)));
@@ -409,6 +421,8 @@ function applySingleProperties() {
   w.Thickness = FIXED_WALL_THICKNESS;
   w.IsVeranda = $("prop-type").value === "veranda";
   w.IsLoadBearing = $("prop-bearing").checked;
+  autoJoinWallEndpoint(w, "start");
+  autoJoinWallEndpoint(w, "end");
   removeExactDuplicates();
   commitHistory();
   runValidation(false);

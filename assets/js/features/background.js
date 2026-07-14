@@ -13,6 +13,8 @@ function loadBackgroundFile(file) {
       background.img = img;
       background.dataUrl = reader.result;
       background.visible = true;
+      background.flipX = false;
+      background.flipY = false;
       $("background-visible").checked = true;
       $("background-badge").textContent = "есть";
       fitBackgroundToView();
@@ -47,6 +49,25 @@ function updateBackgroundSizeUI() {
     hasBackground && background.height > 0
       ? String(Math.round(background.height))
       : "";
+  for (const id of ["btn-bg-origin", "btn-bg-flip-x", "btn-bg-flip-y"]) {
+    $(id).disabled = !hasBackground;
+  }
+  $("btn-bg-flip-x").classList.toggle(
+    "primary",
+    hasBackground && Boolean(background.flipX),
+  );
+  $("btn-bg-flip-y").classList.toggle(
+    "primary",
+    hasBackground && Boolean(background.flipY),
+  );
+  $("btn-bg-flip-x").setAttribute(
+    "aria-pressed",
+    String(hasBackground && Boolean(background.flipX)),
+  );
+  $("btn-bg-flip-y").setAttribute(
+    "aria-pressed",
+    String(hasBackground && Boolean(background.flipY)),
+  );
 }
 function setBackgroundSize(width, height, keepCenter = true) {
   if (!background.img)
@@ -129,6 +150,24 @@ function fitBackgroundToView() {
   background.height = height;
   background.x = (left.x + rightTop.x - width) / 2;
   background.y = (left.y + rightTop.y - height) / 2;
+  updateBackgroundSizeUI();
+  scheduleAutosave();
+  draw();
+}
+function moveBackgroundToOrigin() {
+  if (!background.img)
+    return showModal("Нет подложки", "Сначала загрузите изображение плана.");
+  background.x = 0;
+  background.y = 0;
+  scheduleAutosave();
+  draw();
+}
+function toggleBackgroundFlip(axis) {
+  if (!background.img)
+    return showModal("Нет подложки", "Сначала загрузите изображение плана.");
+  if (axis === "x") background.flipX = !background.flipX;
+  else if (axis === "y") background.flipY = !background.flipY;
+  else return;
   updateBackgroundSizeUI();
   scheduleAutosave();
   draw();
@@ -253,6 +292,8 @@ function removeBackground() {
     y: 0,
     width: 0,
     height: 0,
+    flipX: false,
+    flipY: false,
     moveMode: false,
   };
   $("background-badge").textContent = "нет";

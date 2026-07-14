@@ -342,6 +342,9 @@ function bindUiActions() {
     "scale-background": (element) =>
       scaleBackground(Number(element.dataset.factor)),
     "fit-background": () => fitBackgroundToView(),
+    "background-to-origin": () => moveBackgroundToOrigin(),
+    "flip-background": (element) =>
+      toggleBackgroundFlip(element.dataset.axis),
     "toggle-background-move": () => toggleBackgroundMove(),
     "start-calibration": () => startCalibration(),
     "remove-background": () => removeBackground(),

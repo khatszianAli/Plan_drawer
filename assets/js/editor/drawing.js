@@ -70,6 +70,19 @@ function commitDrawnWall(manualLength = null) {
         : { x: drawStart.x, y: drawStart.y + len * drawSign };
   }
   end = { x: Math.round(end.x), y: Math.round(end.y) };
+  const excluded = new Set(
+    drawStartAttachment?.wallId ? [drawStartAttachment.wallId] : [],
+  );
+  const autoJoined = snapEndpointToPhysicalFace(
+    end,
+    drawStart,
+    drawDirection,
+    drawSign,
+    excluded,
+    AUTO_JOIN_GAP_MM,
+  );
+  if (autoJoined.snapped)
+    end = { x: Math.round(autoJoined.x), y: Math.round(autoJoined.y) };
   if (Math.hypot(end.x - drawStart.x, end.y - drawStart.y) < 1) return;
   const newWall = createWall({
     IsVeranda: activeWallType === "veranda",

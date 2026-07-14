@@ -215,14 +215,21 @@ function drawBackground() {
   )
     return;
   const topLeft = worldToScreen(background.x, background.y + background.height);
+  const drawWidth = background.width * view.scale;
+  const drawHeight = background.height * view.scale;
   ctx.save();
   ctx.globalAlpha = background.opacity;
+  ctx.translate(
+    topLeft.x + (background.flipX ? drawWidth : 0),
+    topLeft.y + (background.flipY ? drawHeight : 0),
+  );
+  ctx.scale(background.flipX ? -1 : 1, background.flipY ? -1 : 1);
   ctx.drawImage(
     background.img,
-    topLeft.x,
-    topLeft.y,
-    background.width * view.scale,
-    background.height * view.scale,
+    0,
+    0,
+    drawWidth,
+    drawHeight,
   );
   ctx.restore();
   if (mode === "background-move") {
