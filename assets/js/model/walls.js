@@ -118,9 +118,10 @@ function cleanWallForStorage(w) {
     EndY: Math.round(w.EndY),
   };
 }
-// Публичный экспорт намеренно содержит только согласованные поля.
+// Публичный экспорт содержит геометрию и заданное пользователем название стены.
 function cleanWallForJSONExport(w) {
   return {
+    Name: w.Name || "",
     IsVeranda: Boolean(w.IsVeranda),
     StartX: Math.round(w.StartX),
     EndX: Math.round(w.EndX),
