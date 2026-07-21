@@ -131,8 +131,8 @@ function drawMoveGuides() {
     const target = wallById(id);
     if (!target) continue;
     const r = wallBounds(target);
-    const topLeft = worldToScreen(r.minX, r.maxY);
-    const bottomRight = worldToScreen(r.maxX, r.minY);
+    const topLeft = worldToScreen(r.minX, r.minY);
+    const bottomRight = worldToScreen(r.maxX, r.maxY);
     ctx.strokeStyle = "#10b981";
     ctx.lineWidth = 2.2;
     ctx.strokeRect(
@@ -214,7 +214,7 @@ function drawBackground() {
     !background.height
   )
     return;
-  const topLeft = worldToScreen(background.x, background.y + background.height);
+  const topLeft = worldToScreen(background.x, background.y);
   const drawWidth = background.width * view.scale;
   const drawHeight = background.height * view.scale;
   ctx.save();
@@ -235,7 +235,7 @@ function drawBackground() {
   if (mode === "background-move") {
     const bottomRight = worldToScreen(
       background.x + background.width,
-      background.y,
+      background.y + background.height,
     );
     ctx.save();
     ctx.strokeStyle = "#2563eb";
@@ -280,12 +280,12 @@ function drawGrid() {
   const major = step * 5;
   const left = (0 - view.originX) / view.scale,
     right = (size.width - view.originX) / view.scale;
-  const bottom = (view.originY - size.height) / view.scale,
-    top = view.originY / view.scale;
+  const top = (0 - view.originY) / view.scale,
+    bottom = (size.height - view.originY) / view.scale;
   const startX = Math.floor(left / step) * step,
     endX = Math.ceil(right / step) * step;
-  const startY = Math.floor(bottom / step) * step,
-    endY = Math.ceil(top / step) * step;
+  const startY = Math.floor(top / step) * step,
+    endY = Math.ceil(bottom / step) * step;
   ctx.save();
   for (let x = startX; x <= endX; x += step) {
     const s = worldToScreen(x, 0);
@@ -334,8 +334,8 @@ function wallRenderStyle(w, preview = false) {
 function drawPhysicalWallBody(w, style, preview = false) {
   if (!isAxisAligned(w) || wallLength(w) < 1) return;
   const r = wallBounds(w);
-  const topLeft = worldToScreen(r.minX, r.maxY);
-  const bottomRight = worldToScreen(r.maxX, r.minY);
+  const topLeft = worldToScreen(r.minX, r.minY);
+  const bottomRight = worldToScreen(r.maxX, r.maxY);
   const x = Math.min(topLeft.x, bottomRight.x);
   const y = Math.min(topLeft.y, bottomRight.y);
   const width = Math.abs(bottomRight.x - topLeft.x);
@@ -401,8 +401,8 @@ function drawWallCollection(wallList, preview = false) {
     for (const w of wallList) {
       if (!selectedIds.has(w.Id)) continue;
       const r = wallBounds(w);
-      const topLeft = worldToScreen(r.minX, r.maxY);
-      const bottomRight = worldToScreen(r.maxX, r.minY);
+      const topLeft = worldToScreen(r.minX, r.minY);
+      const bottomRight = worldToScreen(r.maxX, r.maxY);
       const x = Math.min(topLeft.x, bottomRight.x);
       const y = Math.min(topLeft.y, bottomRight.y);
       const width = Math.abs(bottomRight.x - topLeft.x);

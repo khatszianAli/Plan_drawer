@@ -33,21 +33,21 @@ function fitWalls(items) {
   const cx = (minX + maxX) / 2,
     cy = (minY + maxY) / 2;
   view.originX = size.width / 2 - cx * view.scale;
-  view.originY = size.height / 2 + cy * view.scale;
+  view.originY = size.height / 2 - cy * view.scale;
   updateZoomIndicator();
   draw();
 }
 function centerOnWorld(x, y) {
   const size = canvasSize();
   view.originX = size.width / 2 - x * view.scale;
-  view.originY = size.height / 2 + y * view.scale;
+  view.originY = size.height / 2 - y * view.scale;
   draw();
 }
 function zoomAt(clientX, clientY, factor) {
   const p = screenToWorld(clientX, clientY);
   view.scale = clamp(view.scale * factor, 0.02, 2);
   view.originX = p.sx - p.x * view.scale;
-  view.originY = p.sy + p.y * view.scale;
+  view.originY = p.sy - p.y * view.scale;
   updateZoomIndicator();
   draw();
 }
@@ -57,7 +57,7 @@ function zoomAtCenter(factor) {
 }
 function resetView() {
   const size = canvasSize();
-  view = { scale: 0.16, originX: 50, originY: size.height - 50 };
+  view = { scale: 0.16, originX: 50, originY: 50 };
   updateZoomIndicator();
   draw();
 }

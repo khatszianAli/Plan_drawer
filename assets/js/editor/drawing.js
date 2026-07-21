@@ -39,25 +39,35 @@ function updateDrawingPreview(p) {
     drawSign,
   );
   drawStart = resolvedStart
-    ? { x: roundStep(resolvedStart.x), y: roundStep(resolvedStart.y) }
+    ? { x: resolvedStart.x, y: resolvedStart.y }
     : { ...base };
-  let rawEnd;
+  let snapProbe;
+  let steppedEnd;
   if (horizontal) {
-    rawEnd = { x: roundStep(snapAxis(p.x, "x")), y: drawStart.y };
+    const x = snapAxis(p.x, "x");
+    snapProbe = { x, y: drawStart.y };
+    steppedEnd = { x: roundStep(x), y: drawStart.y };
   } else {
-    rawEnd = { x: drawStart.x, y: roundStep(snapAxis(p.y, "y")) };
+    const y = snapAxis(p.y, "y");
+    snapProbe = { x: drawStart.x, y };
+    steppedEnd = { x: drawStart.x, y: roundStep(y) };
   }
   const excluded = new Set(
     drawStartAttachment?.wallId ? [drawStartAttachment.wallId] : [],
   );
   const snapped = snapEndpointToPhysicalFace(
-    rawEnd,
+    snapProbe,
     drawStart,
     drawDirection,
     drawSign,
     excluded,
   );
-  drawCurrent = { x: roundStep(snapped.x), y: roundStep(snapped.y) };
+  // Шаг применяется к свободной координате, но точная физическая грань
+  // всегда имеет приоритет. Иначе стык на половине толщины стены (75 мм)
+  // ломался при шагах 100 мм и больше.
+  drawCurrent = snapped.snapped
+    ? { x: snapped.x, y: snapped.y }
+    : steppedEnd;
 }
 function commitDrawnWall(manualLength = null) {
   if (!isDrawing || !drawStart || !drawCurrent) return;

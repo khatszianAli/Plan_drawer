@@ -50,7 +50,7 @@ async function importJSONFile(file) {
     fitPlan();
     showModal(
       "Импорт завершён",
-      `Загружено стен: ${walls.length}. Координаты интерпретированы в миллиметрах, начало координат — слева снизу.`,
+      `Загружено стен: ${walls.length}. Координаты интерпретированы в миллиметрах, начало координат — слева сверху, ось Y направлена вниз.`,
     );
   } catch (error) {
     showModal("Ошибка импорта", error.message || "Не удалось прочитать JSON.");
@@ -76,7 +76,8 @@ function saveToLocalStorage(showResult = false) {
       ? mode
       : previousMode;
     const data = {
-      version: 5,
+      version: 6,
+      coordinateSystem: "y-down",
       walls: walls.map(cleanWallForStorage),
       view,
       settings: {
@@ -147,6 +148,13 @@ function restoreAutosave() {
         mode = data.settings.mode;
     }
     if (Array.isArray(data.walls)) walls = data.walls.map(createWall);
+    const needsYAxisMigration = data.coordinateSystem !== "y-down";
+    if (needsYAxisMigration) {
+      walls.forEach((w) => {
+        w.StartY = -w.StartY;
+        w.EndY = -w.EndY;
+      });
+    }
     const legacyFormat = Number(data.version) <= 4;
     const repairedLegacyIds = new Set();
     walls.forEach((w) => {
@@ -174,6 +182,9 @@ function restoreAutosave() {
       view = { ...view, ...data.view };
     if (data.background) {
       background = { ...background, ...data.background };
+      if (needsYAxisMigration && Number.isFinite(background.y)) {
+        background.y = -(background.y + (Number(background.height) || 0));
+      }
       background.flipX = Boolean(data.background.flipX);
       background.flipY = Boolean(data.background.flipY);
       $("background-visible").checked = background.visible !== false;

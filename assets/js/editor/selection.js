@@ -174,11 +174,11 @@ function updateWallDrag(p) {
   if (!drag) return;
   const excluded = new Set(drag.originals.keys());
   if (drag.type === "walls") {
-    const rawDx = roundStep(p.x - drag.start.x);
-    const rawDy = roundStep(p.y - drag.start.y);
-    const snapped = findBestWholeWallSnap(rawDx, rawDy, excluded);
-    const dx = snapped.dx;
-    const dy = snapped.dy;
+    const pointerDx = p.x - drag.start.x;
+    const pointerDy = p.y - drag.start.y;
+    const snapped = findBestWholeWallSnap(pointerDx, pointerDy, excluded);
+    const dx = snapped.guides.x ? snapped.dx : roundStep(pointerDx);
+    const dy = snapped.guides.y ? snapped.dy : roundStep(pointerDy);
     activeMoveGuides = snapped.guides;
     for (const [id, original] of drag.originals) {
       const w = wallById(id);
@@ -207,11 +207,17 @@ function updateWallDrag(p) {
       : p.y >= fixed.y
         ? 1
         : -1;
+    const snappedAxis = horizontal
+      ? snapAxis(p.x, "x", excluded)
+      : snapAxis(p.y, "y", excluded);
     let moving = horizontal
-      ? { x: roundStep(snapAxis(p.x, "x", excluded)), y: fixed.y }
-      : { x: fixed.x, y: roundStep(snapAxis(p.y, "y", excluded)) };
+      ? { x: roundStep(snappedAxis), y: fixed.y }
+      : { x: fixed.x, y: roundStep(snappedAxis) };
+    const snapProbe = horizontal
+      ? { x: snappedAxis, y: fixed.y }
+      : { x: fixed.x, y: snappedAxis };
     const snap = snapEndpointToPhysicalFace(
-      moving,
+      snapProbe,
       fixed,
       orientation,
       sign,
@@ -286,8 +292,8 @@ function finishSelectionBox(additive) {
   if (Math.abs(x2 - x1) > 4 || Math.abs(y2 - y1) > 4) {
     for (const w of walls) {
       const r = wallBounds(w);
-      const topLeft = worldToScreen(r.minX, r.maxY);
-      const bottomRight = worldToScreen(r.maxX, r.minY);
+      const topLeft = worldToScreen(r.minX, r.minY);
+      const bottomRight = worldToScreen(r.maxX, r.maxY);
       if (
         topLeft.x >= x1 &&
         bottomRight.x <= x2 &&

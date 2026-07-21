@@ -174,13 +174,16 @@ function toggleBackgroundFlip(axis) {
 }
 function backgroundCornerWorldPoints() {
   return {
-    nw: { x: background.x, y: background.y + background.height },
+    nw: { x: background.x, y: background.y },
     ne: {
+      x: background.x + background.width,
+      y: background.y,
+    },
+    se: {
       x: background.x + background.width,
       y: background.y + background.height,
     },
-    se: { x: background.x + background.width, y: background.y },
-    sw: { x: background.x, y: background.y },
+    sw: { x: background.x, y: background.y + background.height },
   };
 }
 function hitBackgroundResizeHandle(clientX, clientY) {
@@ -202,10 +205,13 @@ function beginBackgroundResize(corner, p) {
     height: background.height,
   };
   const opposite = {
-    nw: { x: original.x + original.width, y: original.y },
-    ne: { x: original.x, y: original.y },
-    se: { x: original.x, y: original.y + original.height },
-    sw: { x: original.x + original.width, y: original.y + original.height },
+    nw: {
+      x: original.x + original.width,
+      y: original.y + original.height,
+    },
+    ne: { x: original.x, y: original.y + original.height },
+    se: { x: original.x, y: original.y },
+    sw: { x: original.x + original.width, y: original.y },
   }[corner];
   drag = {
     type: "background-resize",
@@ -229,7 +235,7 @@ function updateBackgroundResize(p) {
   background.width = width;
   background.height = height;
   background.x = corner.includes("w") ? opposite.x - width : opposite.x;
-  background.y = corner.includes("s") ? opposite.y - height : opposite.y;
+  background.y = corner.includes("n") ? opposite.y - height : opposite.y;
   drag.changed = true;
   updateBackgroundSizeUI();
   draw();

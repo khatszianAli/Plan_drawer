@@ -5,7 +5,7 @@
  */
 
 function worldToScreen(x, y) {
-  return { x: view.originX + x * view.scale, y: view.originY - y * view.scale };
+  return { x: view.originX + x * view.scale, y: view.originY + y * view.scale };
 }
 function screenToWorld(clientX, clientY) {
   const r = canvas.getBoundingClientRect();
@@ -13,7 +13,7 @@ function screenToWorld(clientX, clientY) {
   const sy = clientY - r.top;
   return {
     x: (sx - view.originX) / view.scale,
-    y: (view.originY - sy) / view.scale,
+    y: (sy - view.originY) / view.scale,
     sx,
     sy,
   };
@@ -22,15 +22,12 @@ function resizeCanvas() {
   const dpr = window.devicePixelRatio || 1;
   const width = workspace.clientWidth;
   const height = workspace.clientHeight;
-  const oldHeight = lastCanvasCssHeight;
   canvas.width = Math.max(1, Math.floor(width * dpr));
   canvas.height = Math.max(1, Math.floor(height * dpr));
   canvas.style.width = width + "px";
   canvas.style.height = height + "px";
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  if (oldHeight && oldHeight !== height) view.originY += height - oldHeight;
-  lastCanvasCssHeight = height;
-  if (!Number.isFinite(view.originY)) view.originY = height - 50;
+  if (!Number.isFinite(view.originY)) view.originY = 50;
   draw();
 }
 function canvasSize() {
