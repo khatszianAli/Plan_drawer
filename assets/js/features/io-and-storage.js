@@ -126,7 +126,10 @@ function restoreAutosave() {
     if (!raw) return false;
     const data = JSON.parse(raw);
     if (data.settings) {
-      drawingStepMM = normalizePositiveInteger(data.settings.drawingStepMM, 1);
+      drawingStepMM = normalizePositiveInteger(
+        data.settings.drawingStepMM,
+        DEFAULT_DRAWING_STEP_MM,
+      );
       defaultWallThickness = FIXED_WALL_THICKNESS;
       activeWallType =
         data.settings.activeWallType === "veranda" ? "veranda" : "normal";
