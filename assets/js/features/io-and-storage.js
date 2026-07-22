@@ -68,10 +68,6 @@ function saveToLocalStorage(showResult = false) {
       "select",
       "draw-normal",
       "draw-veranda",
-      "shape-rectangle",
-      "shape-square",
-      "shape-u",
-      "eraser",
     ].includes(mode)
       ? mode
       : previousMode;
@@ -139,10 +135,6 @@ function restoreAutosave() {
           "select",
           "draw-normal",
           "draw-veranda",
-          "shape-rectangle",
-          "shape-square",
-          "shape-u",
-          "eraser",
         ].includes(data.settings.mode)
       )
         mode = data.settings.mode;

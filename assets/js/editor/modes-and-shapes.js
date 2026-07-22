@@ -8,10 +8,6 @@ function updateModeUI() {
   $("btn-select").classList.toggle("active", mode === "select");
   $("btn-normal").classList.toggle("active", mode === "draw-normal");
   $("btn-veranda").classList.toggle("active", mode === "draw-veranda");
-  $("btn-rectangle").classList.toggle("active", mode === "shape-rectangle");
-  $("btn-square").classList.toggle("active", mode === "shape-square");
-  $("btn-u-shape").classList.toggle("active", mode === "shape-u");
-  $("btn-eraser").classList.toggle("active", mode === "eraser");
   $("btn-wall-toggle").textContent =
     activeWallType === "veranda" ? "Тип: веранда ↹" : "Тип: обычная ↹";
   workspace.classList.remove(
@@ -32,10 +28,6 @@ function updateModeUI() {
     select: "выбор",
     "draw-normal": "обычная стена",
     "draw-veranda": "стена веранды",
-    "shape-rectangle": "прямоугольник",
-    "shape-square": "квадрат",
-    "shape-u": "П-образный контур",
-    eraser: "ластик",
     calibrate: "калибровка подложки",
     "background-move": "перемещение подложки",
   };
@@ -47,11 +39,7 @@ function updateModeUI() {
         ? '<span class="calibration-line">Калибровка:</span> поставьте две точки известного расстояния на подложке. Esc — отменить.'
         : mode === "background-move"
           ? "Перетащите подложку мышкой. Потяните за синий угловой маркер, чтобы изменить размер. Повторно нажмите кнопку для выхода."
-          : mode === "eraser"
-            ? "Линейный ластик: первый клик — начало, второй — конец удаляемого участка. Можно ввести точную длину и нажать Enter. Esc — отменить текущий отрезок."
-            : mode.startsWith("shape-")
-              ? "Зажмите ЛКМ и протяните фигуру. Tab мгновенно меняет обычные стены и веранду. Esc — отменить."
-              : "ЛКМ — рисование физической стены 150 мм. Первая обычная стена или стена веранды всегда начинается в координате (0, 0). При повороте координаты автоматически смещаются к граням на 75 мм, поэтому стены не входят друг в друга. Tab — сменить тип стены. Esc — завершить цепочку.";
+          : "ЛКМ — рисование физической стены 150 мм. Первая обычная стена или стена веранды всегда начинается в координате (0, 0). При повороте координаты автоматически смещаются к граням на 75 мм, поэтому стены не входят друг в друга. Tab — сменить тип стены. Esc — завершить цепочку.";
 }
 function setMode(next) {
   if (next === "draw-normal") activeWallType = "normal";

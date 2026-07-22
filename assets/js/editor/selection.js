@@ -354,12 +354,14 @@ function mergeSelectedWalls() {
         : nearlyEqual(w.StartX, first.StartX)) &&
       w.IsVeranda === first.IsVeranda &&
       w.IsLoadBearing === first.IsLoadBearing &&
+      normalizeBuildStage(w.BuildStage) ===
+        normalizeBuildStage(first.BuildStage) &&
       nearlyEqual(w.Thickness, first.Thickness),
   );
   if (!compatible)
     return showModal(
       "Нельзя объединить",
-      "Стены должны находиться на одной оси и иметь одинаковый тип, толщину и статус несущей стены.",
+      "Стены должны находиться на одной оси и иметь одинаковые тип, толщину и стадию.",
     );
   const intervals = selected
     .map((w) =>
@@ -426,7 +428,7 @@ function applySingleProperties() {
   w.EndY = ey;
   w.Thickness = FIXED_WALL_THICKNESS;
   w.IsVeranda = $("prop-type").value === "veranda";
-  w.IsLoadBearing = $("prop-bearing").checked;
+  w.BuildStage = normalizeBuildStage($("prop-build-stage").value);
   autoJoinWallEndpoint(w, "start");
   autoJoinWallEndpoint(w, "end");
   removeExactDuplicates();
@@ -445,10 +447,11 @@ function setSelectionType(isVeranda) {
   updateSelectionUI();
   draw();
 }
-function setSelectionBearing(value) {
+function setSelectionBuildStage(value) {
   if (!selectedIds.size) return;
+  const stage = normalizeBuildStage(value);
   walls.forEach((w) => {
-    if (selectedIds.has(w.Id)) w.IsLoadBearing = value;
+    if (selectedIds.has(w.Id)) w.BuildStage = stage;
   });
   commitHistory();
   runValidation(false);
@@ -473,7 +476,7 @@ function updateSelectionUI(updateInputs = true) {
       $("prop-ey").value = Math.round(w.EndY);
       $("prop-thickness").value = FIXED_WALL_THICKNESS;
       $("prop-type").value = w.IsVeranda ? "veranda" : "normal";
-      $("prop-bearing").checked = Boolean(w.IsLoadBearing);
+      $("prop-build-stage").value = buildStageInputValue(w.BuildStage);
       const bounds = wallBounds(w);
       $("prop-length").textContent =
         `Длина: ${Math.round(wallLength(w))} мм · физические границы X: ${Math.round(bounds.minX)}…${Math.round(bounds.maxX)}, Y: ${Math.round(bounds.minY)}…${Math.round(bounds.maxY)}`;
@@ -488,6 +491,13 @@ function updateSelectionUI(updateInputs = true) {
     if (updateInputs)
       $("multi-thickness").value =
         thicknesses.length === 1 ? thicknesses[0] : "";
+    if (updateInputs) {
+      const stages = new Set(
+        selectedWalls.map((w) => buildStageInputValue(w.BuildStage)),
+      );
+      $("multi-build-stage").value =
+        stages.size === 1 ? [...stages][0] : "";
+    }
   }
   $("status-count").textContent = `Стен: ${walls.length}`;
 }

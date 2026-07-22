@@ -8,6 +8,16 @@ function normalizePositiveInteger(value, fallback = 1) {
   const parsed = Math.round(Number(value));
   return Number.isFinite(parsed) && parsed >= 1 ? parsed : fallback;
 }
+function normalizeBuildStage(value) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 6
+    ? parsed
+    : null;
+}
+function buildStageInputValue(value) {
+  const stage = normalizeBuildStage(value);
+  return stage === null ? "none" : String(stage);
+}
 function updateBuildSettingsUI() {
   $("draw-step").value = drawingStepMM;
   defaultWallThickness = FIXED_WALL_THICKNESS;
@@ -59,6 +69,7 @@ function createWall(raw = {}) {
     Name: typeof raw.Name === "string" ? raw.Name : "",
     IsVeranda: Boolean(raw.IsVeranda),
     IsLoadBearing: raw.IsLoadBearing !== false,
+    BuildStage: normalizeBuildStage(raw.BuildStage),
     Thickness: FIXED_WALL_THICKNESS,
     StartX: sx,
     StartY: sy,
@@ -111,6 +122,7 @@ function cleanWallForStorage(w) {
     Name: w.Name || "",
     IsVeranda: Boolean(w.IsVeranda),
     IsLoadBearing: Boolean(w.IsLoadBearing),
+    BuildStage: normalizeBuildStage(w.BuildStage),
     Thickness: FIXED_WALL_THICKNESS,
     StartX: Math.round(w.StartX),
     StartY: Math.round(w.StartY),
@@ -120,12 +132,16 @@ function cleanWallForStorage(w) {
 }
 // Публичный экспорт содержит геометрию и заданное пользователем название стены.
 function cleanWallForJSONExport(w) {
-  return {
-    Name: w.Name || "",
+  const stage = normalizeBuildStage(w.BuildStage);
+  const exported = {
     IsVeranda: Boolean(w.IsVeranda),
     StartX: Math.round(w.StartX),
     EndX: Math.round(w.EndX),
     StartY: Math.round(w.StartY),
     EndY: Math.round(w.EndY),
   };
+  const name = typeof w.Name === "string" ? w.Name.trim() : "";
+  if (name) exported.Name = name;
+  if (stage !== null) exported.BuildStage = stage;
+  return exported;
 }

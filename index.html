@@ -58,41 +58,6 @@
           </button>
         </div>
 
-        <div class="toolbar-group" aria-label="Геометрические фигуры">
-          <button
-            id="btn-rectangle"
-            class="btn"
-            data-mode="shape-rectangle"
-            title="Прямоугольник (R)"
-          >
-            ▭ Прямоугольник
-          </button>
-          <button
-            id="btn-square"
-            class="btn"
-            data-mode="shape-square"
-            title="Квадрат (Q)"
-          >
-            □ Квадрат
-          </button>
-          <button
-            id="btn-u-shape"
-            class="btn"
-            data-mode="shape-u"
-            title="П-образный контур (U)"
-          >
-            ⊔ П-форма
-          </button>
-          <button
-            id="btn-eraser"
-            class="btn danger"
-            data-mode="eraser"
-            title="Линейный ластик (E)"
-          >
-            ⌫ Ластик
-          </button>
-        </div>
-
         <div class="toolbar-group" aria-label="Редактирование">
           <button
             id="btn-undo"
@@ -296,12 +261,19 @@
                     <option value="veranda">Веранда</option>
                   </select>
                 </label>
+                <label class="field">
+                  <span>Стадия</span>
+                  <select id="prop-build-stage">
+                    <option value="none">None</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                  </select>
+                </label>
               </div>
-
-              <label class="check">
-                <input id="prop-bearing" type="checkbox" />
-                Несущая стена
-              </label>
 
               <div class="row">
                 <button
@@ -349,29 +321,23 @@
                 >
                   Веранда
                 </button>
-                <button
-                  class="mini-btn"
-                  data-action="selection-bearing"
-                  data-value="true"
-                >
-                  Несущие
-                </button>
-                <button
-                  class="mini-btn"
-                  data-action="selection-bearing"
-                  data-value="false"
-                >
-                  Ненесущие
-                </button>
               </div>
 
+              <label class="field mt-8">
+                <span>Стадия выбранных стен</span>
+                <select id="multi-build-stage">
+                  <option value="" disabled>Разные стадии</option>
+                  <option value="none">None</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6">6</option>
+                </select>
+              </label>
+
               <div class="row mt-8">
-                <button
-                  class="mini-btn flex-1"
-                  data-action="duplicate-selection"
-                >
-                  Дублировать
-                </button>
                 <button class="mini-btn danger" data-action="delete-selection">
                   Удалить
                 </button>

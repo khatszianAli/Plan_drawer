@@ -219,22 +219,6 @@ window.addEventListener("keydown", (e) => {
     setMode("draw-veranda");
     return;
   }
-  if (!editing && e.key.toLowerCase() === "r") {
-    setMode("shape-rectangle");
-    return;
-  }
-  if (!editing && e.key.toLowerCase() === "q") {
-    setMode("shape-square");
-    return;
-  }
-  if (!editing && e.key.toLowerCase() === "u") {
-    setMode("shape-u");
-    return;
-  }
-  if (!editing && e.key.toLowerCase() === "e") {
-    setMode("eraser");
-    return;
-  }
   if (!editing && (e.key === "Delete" || e.key === "Backspace")) {
     e.preventDefault();
     deleteSelection();
@@ -285,6 +269,9 @@ $("default-thickness").addEventListener("change", (e) =>
 );
 $("default-thickness").addEventListener("blur", (e) =>
   setDefaultWallThickness(e.target.value),
+);
+$("multi-build-stage").addEventListener("change", (e) =>
+  setSelectionBuildStage(e.target.value),
 );
 $("json-input").addEventListener("change", (e) =>
   importJSONFile(e.target.files[0]),
@@ -337,8 +324,6 @@ function bindUiActions() {
     "delete-selection": () => deleteSelection(),
     "selection-type": (element) =>
       setSelectionType(element.dataset.value === "veranda"),
-    "selection-bearing": (element) =>
-      setSelectionBearing(element.dataset.value === "true"),
     "scale-background": (element) =>
       scaleBackground(Number(element.dataset.factor)),
     "fit-background": () => fitBackgroundToView(),
