@@ -26,6 +26,7 @@ let walls = [];
 let selectedIds = new Set();
 let drawingStepMM = DEFAULT_DRAWING_STEP_MM;
 let defaultWallThickness = FIXED_WALL_THICKNESS;
+let activeLayer = "walls";
 let mode = "draw-normal";
 let previousMode = "draw-normal";
 let activeWallType = "normal";

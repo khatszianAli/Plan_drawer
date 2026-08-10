@@ -80,6 +80,7 @@ function saveToLocalStorage(showResult = false) {
         drawingStepMM,
         defaultWallThickness: FIXED_WALL_THICKNESS,
         activeWallType,
+        activeLayer,
         mode: persistedMode,
       },
       background: {
@@ -130,6 +131,7 @@ function restoreAutosave() {
       defaultWallThickness = FIXED_WALL_THICKNESS;
       activeWallType =
         data.settings.activeWallType === "veranda" ? "veranda" : "normal";
+      activeLayer = data.settings.activeLayer === "roof" ? "roof" : "walls";
       if (
         [
           "select",

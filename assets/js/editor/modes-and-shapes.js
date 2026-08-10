@@ -5,9 +5,29 @@
  */
 
 function updateModeUI() {
-  $("btn-select").classList.toggle("active", mode === "select");
-  $("btn-normal").classList.toggle("active", mode === "draw-normal");
-  $("btn-veranda").classList.toggle("active", mode === "draw-veranda");
+  const roofLayerActive = activeLayer === "roof";
+  $("btn-layer-walls").classList.toggle("active", !roofLayerActive);
+  $("btn-layer-roof").classList.toggle("active", roofLayerActive);
+  $("btn-layer-walls").setAttribute("aria-pressed", String(!roofLayerActive));
+  $("btn-layer-roof").setAttribute("aria-pressed", String(roofLayerActive));
+  $("wall-tools")
+    .querySelectorAll("button")
+    .forEach((button) => (button.disabled = roofLayerActive));
+  $("wall-editing-tools")
+    .querySelectorAll("button")
+    .forEach((button) => (button.disabled = roofLayerActive));
+  $("btn-select").classList.toggle(
+    "active",
+    !roofLayerActive && mode === "select",
+  );
+  $("btn-normal").classList.toggle(
+    "active",
+    !roofLayerActive && mode === "draw-normal",
+  );
+  $("btn-veranda").classList.toggle(
+    "active",
+    !roofLayerActive && mode === "draw-veranda",
+  );
   $("btn-wall-toggle").textContent =
     activeWallType === "veranda" ? "Тип: веранда ↹" : "Тип: обычная ↹";
   workspace.classList.remove(
@@ -17,6 +37,17 @@ function updateModeUI() {
     "calibrate-cursor",
     "eraser-cursor",
   );
+  $("status-layer").textContent = roofLayerActive
+    ? "Слой: крыша"
+    : "Слой: стены";
+  if (roofLayerActive) {
+    workspace.classList.add(isPanning ? "pan-cursor" : "select-cursor");
+    $("status-mode").textContent = "Режим: просмотр крыши";
+    $("workspace-hint").textContent =
+      "Слой крыши. Стены показаны полупрозрачно как опорный план. ПКМ или Space + ЛКМ — перемещение холста. Колесо — масштаб.";
+    $("btn-bg-move").classList.remove("primary");
+    return;
+  }
   if (isPanning) workspace.classList.add("pan-cursor");
   else if (mode === "calibrate") workspace.classList.add("calibrate-cursor");
   else if (mode === "eraser") workspace.classList.add("eraser-cursor");
@@ -40,6 +71,32 @@ function updateModeUI() {
         : mode === "background-move"
           ? "Перетащите подложку мышкой. Потяните за синий угловой маркер, чтобы изменить размер. Повторно нажмите кнопку для выхода."
           : "ЛКМ — рисование физической стены 150 мм. Первая обычная стена или стена веранды всегда начинается в координате (0, 0). При повороте координаты автоматически смещаются к граням на 75 мм, поэтому стены не входят друг в друга. Tab — сменить тип стены. Esc — завершить цепочку.";
+}
+function setActiveLayer(nextLayer) {
+  const next = nextLayer === "roof" ? "roof" : "walls";
+  if (activeLayer === next) return;
+  cancelDrawing();
+  shapeDrag = null;
+  cancelLinearEraser();
+  calibrationPoints = [];
+  drag = null;
+  selectionBox = null;
+  activeMoveGuides = { x: null, y: null };
+  background.moveMode = false;
+  if (
+    next === "roof" &&
+    (mode === "calibrate" || mode === "background-move")
+  ) {
+    mode = ["select", "draw-normal", "draw-veranda"].includes(previousMode)
+      ? previousMode
+      : "select";
+  }
+  activeLayer = next;
+  if (activeLayer === "roof") selectedIds.clear();
+  updateSelectionUI();
+  updateModeUI();
+  draw();
+  scheduleAutosave();
 }
 function setMode(next) {
   if (next === "draw-normal") activeWallType = "normal";

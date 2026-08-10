@@ -10,7 +10,7 @@ function normalizePositiveInteger(value, fallback = 1) {
 }
 function normalizeBuildStage(value) {
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 6
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 8
     ? parsed
     : null;
 }

@@ -7,10 +7,10 @@
 function draw() {
   const size = canvasSize();
   ctx.clearRect(0, 0, size.width, size.height);
-  drawBackground();
+  if (activeLayer === "walls") drawBackground();
   drawGrid();
   drawDrawingGuides();
-  drawWallCollection(walls, false);
+  drawWallCollection(walls, false, { reference: activeLayer === "roof" });
   drawMoveGuides();
   if (isDrawing && drawStart && drawCurrent) {
     drawWallCollection(
@@ -331,7 +331,7 @@ function wallRenderStyle(w, preview = false) {
     dashed: Boolean(w.IsVeranda),
   };
 }
-function drawPhysicalWallBody(w, style, preview = false) {
+function drawPhysicalWallBody(w, style, preview = false, opacity = 1) {
   if (!isAxisAligned(w) || wallLength(w) < 1) return;
   const r = wallBounds(w);
   const topLeft = worldToScreen(r.minX, r.minY);
@@ -344,10 +344,10 @@ function drawPhysicalWallBody(w, style, preview = false) {
   if (style.dashed) {
     // Веранда тоже имеет настоящее тело 150 мм. Пунктир — только стиль
     // отображения, а не замена физической ширины стены.
-    ctx.globalAlpha = preview ? 0.18 : 0.12;
+    ctx.globalAlpha = (preview ? 0.18 : 0.12) * opacity;
     ctx.fillStyle = style.color;
     ctx.fillRect(x, y, width, height);
-    ctx.globalAlpha = preview ? 0.8 : 1;
+    ctx.globalAlpha = (preview ? 0.8 : 1) * opacity;
     ctx.strokeStyle = style.color;
     ctx.lineWidth = clamp(2 * (view.scale / 0.16), 1, 5);
     ctx.setLineDash([
@@ -356,7 +356,7 @@ function drawPhysicalWallBody(w, style, preview = false) {
     ]);
     ctx.strokeRect(x, y, width, height);
   } else {
-    ctx.globalAlpha = preview ? 0.72 : 1;
+    ctx.globalAlpha = (preview ? 0.72 : 1) * opacity;
     ctx.fillStyle = style.color;
     ctx.fillRect(x, y, width, height);
   }
@@ -390,13 +390,15 @@ function drawWallLabel(w, preview = false) {
   ctx.fillText(text, mx, my);
   ctx.restore();
 }
-function drawWallCollection(wallList, preview = false) {
+function drawWallCollection(wallList, preview = false, options = {}) {
   if (!wallList.length) return;
+  const reference = Boolean(options.reference);
+  const opacity = reference ? 0.32 : 1;
   for (const w of wallList) {
     const style = wallRenderStyle(w, preview);
-    drawPhysicalWallBody(w, style, preview);
+    drawPhysicalWallBody(w, style, preview, opacity);
   }
-  if (!preview) {
+  if (!preview && !reference) {
     ctx.save();
     for (const w of wallList) {
       if (!selectedIds.has(w.Id)) continue;
@@ -414,7 +416,7 @@ function drawWallCollection(wallList, preview = false) {
     }
     ctx.restore();
   }
-  wallList.forEach((w) => drawWallLabel(w, preview));
+  if (!reference) wallList.forEach((w) => drawWallLabel(w, preview));
 }
 function drawWall(w, preview = false) {
   drawWallCollection([w], preview);

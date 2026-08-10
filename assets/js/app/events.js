@@ -7,6 +7,10 @@ canvas.addEventListener("mousedown", (e) => {
   mouseWorld = p;
   mouseScreen = { x: p.sx, y: p.sy };
   if (e.button === 2 || e.button === 1 || (spacePressed && e.button === 0)) {
+    if (e.button === 2 && isDrawing) {
+      cancelDrawing();
+      draw();
+    }
     isPanning = true;
     panStart = {
       clientX: e.clientX,
@@ -23,6 +27,7 @@ canvas.addEventListener("mousedown", (e) => {
     addCalibrationPoint(p);
     return;
   }
+  if (activeLayer === "roof" && mode !== "background-move") return;
   if (mode === "eraser") {
     if (!eraserDrawing) startLinearEraserAt(p);
     else commitLinearErase(null);
@@ -183,6 +188,7 @@ window.addEventListener("keydown", (e) => {
     spacePressed = true;
     e.preventDefault();
   }
+  if (activeLayer === "roof") return;
   const ctrl = e.ctrlKey || e.metaKey;
   if (ctrl && e.key.toLowerCase() === "z") {
     e.preventDefault();
@@ -303,6 +309,12 @@ $("modal-backdrop").addEventListener("mousedown", (e) => {
 
 /** Bind declarative buttons from index.html. */
 function bindUiActions() {
+  document.querySelectorAll("[data-layer]").forEach((element) => {
+    element.addEventListener("click", () =>
+      setActiveLayer(element.dataset.layer),
+    );
+  });
+
   document.querySelectorAll("[data-mode]").forEach((element) => {
     element.addEventListener("click", () => setMode(element.dataset.mode));
   });

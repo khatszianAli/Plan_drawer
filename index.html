@@ -23,7 +23,30 @@
     <div class="app">
       <!-- Primary editor toolbar -->
       <header class="toolbar" aria-label="Инструменты редактора">
-        <div class="toolbar-group" aria-label="Инструменты стен">
+        <div class="toolbar-group" aria-label="Рабочий слой">
+          <button
+            id="btn-layer-walls"
+            class="btn active"
+            data-layer="walls"
+            title="Перейти к стенам"
+          >
+            Стены
+          </button>
+          <button
+            id="btn-layer-roof"
+            class="btn"
+            data-layer="roof"
+            title="Перейти к крыше"
+          >
+            Крыша
+          </button>
+        </div>
+
+        <div
+          id="wall-tools"
+          class="toolbar-group"
+          aria-label="Инструменты стен"
+        >
           <button
             id="btn-select"
             class="btn"
@@ -58,7 +81,11 @@
           </button>
         </div>
 
-        <div class="toolbar-group" aria-label="Редактирование">
+        <div
+          id="wall-editing-tools"
+          class="toolbar-group"
+          aria-label="Редактирование стен"
+        >
           <button
             id="btn-undo"
             class="btn icon"
@@ -271,6 +298,8 @@
                     <option value="4">4</option>
                     <option value="5">5</option>
                     <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
                   </select>
                 </label>
               </div>
@@ -334,6 +363,8 @@
                   <option value="4">4</option>
                   <option value="5">5</option>
                   <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
                 </select>
               </label>
 
@@ -534,6 +565,7 @@
         <span id="status-coords">X: 0 мм · Y: 0 мм</span>
         <span id="status-count">Стен: 0</span>
         <span id="status-selected">Выбрано: 0</span>
+        <span id="status-layer">Слой: стены</span>
         <span id="status-mode">Режим: стена</span>
         <span id="status-save">Не сохранено</span>
       </footer>
