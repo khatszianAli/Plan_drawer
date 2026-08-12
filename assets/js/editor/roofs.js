@@ -20,7 +20,13 @@ function commitRoofRectangle() {
     EndX: ex,
     EndY: ey,
     RoofType: roofType,
-    Name: roofs.length ? "" : "RootConsctruction",
+    Name: roofs.length ? nextRoofBlockName() : "RootConsctruction",
+    IsRoot: roofType === "multi" && !roofRoot(),
+    ParentId: roofType === "multi"
+      ? roofRoot()?.Id
+      : roofType === "concrete"
+        ? (roofRoot()?.Id || roofs[0]?.Id)
+        : null,
   });
   if (findInvalidRoofOverlap([...roofs, roof], new Set([roof.Id]))) {
     showModal("Наложение блоков крыши", "Блок крыши нельзя разместить с таким пересечением.");
@@ -69,7 +75,7 @@ function updateRoofSlopePopupUI() {
 }
 function openRoofSlopePopup(roofId, end, screenX, screenY) {
   const roof = roofById(roofId);
-  if (!roof || roof.RoofType !== "multi") return;
+  if (!roof || roof.RoofType !== "multi" || (end === "start" && !roof.IsRoot)) return;
   const key = end === "end" ? "SlopeEnd" : "SlopeStart";
   const slope = normalizeRoofSlope(roof[key]);
   activeRoofSlopeEditor = { roofId, end: end === "end" ? "end" : "start" };
@@ -94,6 +100,10 @@ function saveRoofSlopeProperties() {
   if (!activeRoofSlopeEditor) return;
   const roof = roofById(activeRoofSlopeEditor.roofId);
   if (!roof || roof.RoofType !== "multi") {
+    closeRoofSlopePopup();
+    return;
+  }
+  if (activeRoofSlopeEditor.end === "start" && !roof.IsRoot) {
     closeRoofSlopePopup();
     return;
   }
@@ -275,11 +285,20 @@ function applyRoofProperties() {
   const r = roofById([...selectedIds][0]); if (!r) return;
   const values = ["prop-roof-sx", "prop-roof-sy", "prop-roof-ex", "prop-roof-ey"].map((id) => Number($(id).value));
   if (!values.every(Number.isFinite) || values[0] === values[2] || values[1] === values[3]) return showModal("Некорректный блок крыши", "Укажите ненулевые границы блока и числовые координаты.");
-  const candidate = { ...r, Name: $("prop-roof-name").value.trim(), StartX: Math.min(values[0], values[2]), StartY: Math.min(values[1], values[3]), EndX: Math.max(values[0], values[2]), EndY: Math.max(values[1], values[3]), BuildStage: normalizeBuildStage($("prop-roof-stage").value), RoofType: normalizeRoofType($("prop-roof-type").value) };
+  const nextType = normalizeRoofType($("prop-roof-type").value);
+  const nextRoot = nextType === "multi" && $("prop-roof-root").value === "yes";
+  const existingRoot = roofRoot();
+  if (nextRoot && existingRoot && existingRoot.Id !== r.Id)
+    return showModal("Root уже назначен", "Сначала снимите root с текущего блока крыши.");
+  const needsParent = nextType === "concrete" || (nextType === "multi" && !nextRoot);
+  const candidate = { ...r, Name: $("prop-roof-name").value.trim(), StartX: Math.min(values[0], values[2]), StartY: Math.min(values[1], values[3]), EndX: Math.max(values[0], values[2]), EndY: Math.max(values[1], values[3]), BuildStage: normalizeBuildStage($("prop-roof-stage").value), RoofType: nextType, IsRoot: nextRoot, ParentId: needsParent ? normalizeRoofParentId($("prop-roof-parent").value) : null };
+  if (needsParent && !candidate.ParentId)
+    return showModal("Parent не указан", "Для этого блока крыши нужно выбрать parent.");
   const proposed = roofs.map((item) => item.Id === r.Id ? candidate : item);
   if (findInvalidRoofOverlap(proposed, new Set([r.Id]))) return showModal("Наложение блоков крыши", "Эти координаты или тип создают запрещённое пересечение.");
-  Object.assign(r, candidate);
-  if (r.RoofType !== "multi") closeRoofSlopePopup();
+  normalizeRoofHierarchy(proposed);
+  roofs = proposed.map(createRoof);
+  if (candidate.RoofType !== "multi") closeRoofSlopePopup();
   commitHistory(); updateSelectionUI(); draw();
 }
 function rotateSelectedRoof(direction) {

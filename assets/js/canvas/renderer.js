@@ -454,6 +454,7 @@ function drawSelection() {
     if (roof.RoofType === "multi") {
       const ridge = roofRidgeEndpoints(roof);
       for (const [end, point] of Object.entries(ridge)) {
+        if (end === "start" && !roof.IsRoot) continue;
         const slope = normalizeRoofSlope(end === "end" ? roof.SlopeEnd : roof.SlopeStart);
         const screen = worldToScreen(point.x, point.y);
         ctx.beginPath();
@@ -491,7 +492,7 @@ function drawRoofCollection(items, preview = false) {
     const concrete = r.RoofType === "concrete";
     ctx.save(); ctx.globalAlpha = preview ? 0.42 : 0.58; ctx.fillStyle = preview ? (concrete ? "#9ca3af" : "#f59e0b") : (concrete ? "#cbd5e1" : "#fbbf24"); ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1;
     ctx.strokeStyle = selectedIds.has(r.Id) && activeLayer === "roof" ? "#dc2626" : (concrete ? "#64748b" : "#b45309"); ctx.lineWidth = selectedIds.has(r.Id) ? 3 : 2; ctx.setLineDash([7, 4]); ctx.strokeRect(x, y, w, h); ctx.setLineDash([]); ctx.strokeStyle = concrete ? "#475569" : "#92400e"; ctx.fillStyle = concrete ? "#475569" : "#92400e"; ctx.lineWidth = 2;
-    if (r.RoofType === "multi") { ctx.beginPath(); if (roofRidgeAxis(r) === "x") { ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); } else { ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w / 2, y + h); } ctx.stroke(); }
+    if (r.RoofType === "multi") { const ridge = roofRidgeEndpoints(r); const start = worldToScreen(ridge.start.x, ridge.start.y); const end = worldToScreen(ridge.end.x, ridge.end.y); ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.stroke(); }
     else if (r.RoofType === "single") { const sx = x + w / 2, sy = y + h / 2; const angle = (normalizeRoofRotation(r.Rotation) - 90) * Math.PI / 180; const distance = (Math.abs(Math.cos(angle)) * w + Math.abs(Math.sin(angle)) * h) * .28; const ex = sx + Math.cos(angle) * distance, ey = sy + Math.sin(angle) * distance; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.lineTo(ex - 9 * Math.cos(angle - .55), ey - 9 * Math.sin(angle - .55)); ctx.moveTo(ex, ey); ctx.lineTo(ex - 9 * Math.cos(angle + .55), ey - 9 * Math.sin(angle + .55)); ctx.stroke(); }
     if (r.BuildStage) { ctx.font = "600 11px sans-serif"; ctx.fillText(`Этап ${r.BuildStage}`, x + 6, y + 14); }
     ctx.restore();

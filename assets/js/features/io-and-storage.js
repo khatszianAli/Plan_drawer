@@ -7,6 +7,12 @@
 function exportJSON() {
   if (!walls.length && !roofs.length)
     return showModal("План пуст", "Сначала добавьте стены или блоки крыши.");
+  const hasMultiRoof = roofs.some((roof) => roof.RoofType === "multi");
+  if (hasMultiRoof && !roofRoot())
+    return showModal("Нет root-крыши", "Для экспорта JSON назначьте один многоскатный блок крыши как root.");
+  const hierarchyIssue = roofHierarchyIssue(roofs);
+  if (hierarchyIssue)
+    return showModal("Не указан parent", `Укажите parent для блока крыши «${hierarchyIssue.Name || hierarchyIssue.Id}».`);
   const payload = { walls: walls.map(cleanWallForJSONExport), roofs: roofs.map(cleanRoofForJSONExport) };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: "application/json",
@@ -41,6 +47,12 @@ async function importJSONFile(file) {
       return wall;
     });
     const importedRoofs = Array.isArray(parsed?.roofs) ? parsed.roofs.map(createRoof) : [];
+    if (importedRoofs.filter((roof) => roof.RoofType === "multi" && roof.IsRoot).length > 1)
+      throw new Error("В импортируемом плане может быть только одна root-крыша.");
+    normalizeRoofHierarchy(importedRoofs);
+    const hierarchyIssue = roofHierarchyIssue(importedRoofs);
+    if (hierarchyIssue)
+      throw new Error(`Для блока крыши «${hierarchyIssue.Name || hierarchyIssue.Id}» не указан корректный parent.`);
     const invalidRoofOverlap = findInvalidRoofOverlap(importedRoofs);
     if (invalidRoofOverlap) throw new Error("Блоки крыши содержат запрещённое пересечение.");
     walls = imported;
@@ -150,6 +162,7 @@ function restoreAutosave() {
     }
     if (Array.isArray(data.walls)) walls = data.walls.map(createWall);
     if (Array.isArray(data.roofs)) roofs = data.roofs.map(createRoof);
+    normalizeRoofHierarchy(roofs);
     if (activeLayer === "roof") mode = "roof-select";
     const needsYAxisMigration = data.coordinateSystem !== "y-down";
     if (needsYAxisMigration) {

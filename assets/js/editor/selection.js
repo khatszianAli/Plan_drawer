@@ -13,6 +13,7 @@ function hitTest(clientX, clientY) {
         if (selectedRoof.RoofType === "multi") {
           const ridge = roofRidgeEndpoints(selectedRoof);
           for (const [end, point] of Object.entries(ridge)) {
+            if (end === "start" && !selectedRoof.IsRoot) continue;
             const screen = worldToScreen(point.x, point.y);
             if (Math.hypot(p.sx - screen.x, p.sy - screen.y) <= HANDLE_RADIUS + 6)
               return { id: selectedRoof.Id, part: `roof-slope-${end}` };
@@ -343,7 +344,10 @@ function finishSelectionBox(additive) {
 function deleteSelection() {
   if (!selectedIds.size) return;
   closeRoofSlopePopup();
-  if (activeLayer === "roof") roofs = roofs.filter((r) => !selectedIds.has(r.Id));
+  if (activeLayer === "roof") {
+    roofs = roofs.filter((r) => !selectedIds.has(r.Id));
+    normalizeRoofHierarchy(roofs);
+  }
   else walls = walls.filter((w) => !selectedIds.has(w.Id));
   selectedIds.clear();
   commitHistory();
@@ -354,10 +358,17 @@ function deleteSelection() {
 function duplicateSelection() {
   if (!selectedIds.size) return;
   if (activeLayer === "roof") {
-    const copies = roofs.filter((r) => selectedIds.has(r.Id)).map((r) => ({ ...deepClone(r), Id: newRoofId(), Name: r.Name ? `${r.Name} — копия` : "", StartX: r.StartX + 200, EndX: r.EndX + 200, StartY: r.StartY + 200, EndY: r.EndY + 200 }));
+    const names = new Set(roofs.map((r) => r.Name));
+    const copies = [];
+    for (const r of roofs.filter((item) => selectedIds.has(item.Id))) {
+      let name = r.Name ? `${r.Name} — копия` : nextRoofBlockName([...roofs, ...copies]);
+      if (names.has(name)) name = nextRoofBlockName([...roofs, ...copies]);
+      names.add(name);
+      copies.push({ ...deepClone(r), Id: newRoofId(), Name: name, StartX: r.StartX + 200, EndX: r.EndX + 200, StartY: r.StartY + 200, EndY: r.EndY + 200, IsRoot: false, ParentId: r.IsRoot ? r.Id : r.ParentId });
+    }
     const changedIds = new Set(copies.map((r) => r.Id));
     if (findInvalidRoofOverlap([...roofs, ...copies], changedIds)) return showModal("Дублирование невозможно", "Копии блоков крыши создадут запрещённое пересечение.");
-    roofs.push(...copies); selectedIds = new Set(copies.map((r) => r.Id)); commitHistory(); updateSelectionUI(); draw(); return;
+    roofs.push(...copies); normalizeRoofHierarchy(roofs); selectedIds = new Set(copies.map((r) => r.Id)); commitHistory(); updateSelectionUI(); draw(); return;
   }
   const copies = walls
     .filter((w) => selectedIds.has(w.Id))
@@ -559,7 +570,32 @@ function updateRoofSelectionUI(updateInputs = true) {
     $("prop-roof-id").value = r.Id; $("prop-roof-name").value = r.Name || "";
     $("prop-roof-sx").value = r.StartX; $("prop-roof-sy").value = r.StartY; $("prop-roof-ex").value = r.EndX; $("prop-roof-ey").value = r.EndY;
     $("prop-roof-stage").value = buildStageInputValue(r.BuildStage); $("prop-roof-type").value = r.RoofType;
+    updateRoofHierarchyFields(r);
     $("prop-roof-metric").textContent = `Размер: ${Math.round(roofWidth(r))} × ${Math.round(roofHeight(r))} мм`;
   }
   $("status-count").textContent = `Крыши: ${roofs.length}`;
+}
+function updateRoofHierarchyFields(roof) {
+  const multi = roof.RoofType === "multi";
+  const concrete = roof.RoofType === "concrete";
+  $("prop-roof-hierarchy").classList.toggle("hidden", !multi && !concrete);
+  if (!multi && !concrete) return;
+  $("prop-roof-root-field").classList.toggle("hidden", !multi);
+  const rootSelect = $("prop-roof-root");
+  const existingRoot = roofRoot();
+  const rootYesOption = rootSelect.querySelector('option[value="yes"]');
+  rootYesOption.disabled = Boolean(existingRoot && existingRoot.Id !== roof.Id);
+  rootSelect.value = roof.IsRoot ? "yes" : "no";
+  const parent = $("prop-roof-parent");
+  parent.innerHTML = '<option value="">Выберите parent</option>';
+  parent.required = concrete || !roof.IsRoot;
+  for (const candidate of roofs) {
+    if (candidate.Id === roof.Id) continue;
+    const option = document.createElement("option");
+    option.value = candidate.Id;
+    option.textContent = candidate.Name || candidate.Id;
+    parent.appendChild(option);
+  }
+  parent.value = roof.ParentId || "";
+  $("prop-roof-parent-field").classList.toggle("hidden", multi && roof.IsRoot);
 }

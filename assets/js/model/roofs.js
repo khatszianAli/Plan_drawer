@@ -14,16 +14,17 @@ const ROOF_SLOPE_TYPES = [
 function normalizeRoofSlopeType(value) {
   return ROOF_SLOPE_TYPES.includes(value) ? value : "gable";
 }
-function normalizeRoofSlope(raw = {}) {
-  const isEditable = raw.IsEditable !== false;
+function normalizeRoofSlope(raw = {}, forceFixed = false) {
+  const isEditable = !forceFixed && raw.IsEditable !== false;
   return {
     IsEditable: isEditable,
     Type: isEditable ? null : normalizeRoofSlopeType(raw.Type),
   };
 }
-function normalizeRoofRotation(value, legacyDirection = null) {
-  const legacy = { north: 0, east: 90, south: 180, west: 270 };
-  if (Object.prototype.hasOwnProperty.call(legacy, legacyDirection)) return legacy[legacyDirection];
+function normalizeRoofParentId(value) {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+function normalizeRoofRotation(value) {
   const rotation = Number(value);
   return Number.isFinite(rotation) ? ((Math.round(rotation / 90) * 90) % 360 + 360) % 360 : 0;
 }
@@ -33,12 +34,10 @@ function createRoof(raw = {}) {
   const startX = Math.min(sx || 0, ex || 0), startY = Math.min(sy || 0, ey || 0);
   const endX = Math.max(sx || 0, ex || 0), endY = Math.max(sy || 0, ey || 0);
   const roofType = normalizeRoofType(raw.RoofType);
-  const hasStoredRotation = Number.isFinite(Number(raw.Rotation));
-  const rotation = hasStoredRotation
-    ? normalizeRoofRotation(raw.Rotation)
-    : roofType === "multi"
-      ? (endX - startX >= endY - startY ? 0 : 90)
-      : normalizeRoofRotation(null, raw.SlopeDirection);
+  const isRoot = roofType === "multi" && (raw.IsRoot === true || raw.Root === true);
+  // Rotation is the position of the start of the ridge: 0=top, 90=right,
+  // 180=bottom, 270=left. New blocks always start at the top.
+  const rotation = normalizeRoofRotation(raw.Rotation);
   return {
     Id: typeof raw.Id === "string" && raw.Id.trim() ? raw.Id : newRoofId(),
     Name: typeof raw.Name === "string" ? raw.Name : "",
@@ -47,8 +46,12 @@ function createRoof(raw = {}) {
     BuildStage: normalizeBuildStage(raw.BuildStage),
     RoofType: roofType,
     Rotation: rotation,
-    SlopeStart: normalizeRoofSlope(raw.SlopeStart),
+    SlopeStart: normalizeRoofSlope(raw.SlopeStart, roofType === "multi" && !isRoot),
     SlopeEnd: normalizeRoofSlope(raw.SlopeEnd),
+    IsRoot: isRoot,
+    ParentId: roofType === "multi" || roofType === "concrete"
+      ? normalizeRoofParentId(raw.ParentId ?? raw.Parent)
+      : null,
   };
 }
 function roofBounds(r) {
@@ -65,21 +68,20 @@ function roofIntersection(a, b) {
     : null;
 }
 function roofRidgeAxis(r) {
-  return normalizeRoofRotation(r.Rotation) % 180 === 0 ? "x" : "y";
+  return normalizeRoofRotation(r.Rotation) % 180 === 0 ? "y" : "x";
 }
 function roofRidgeEndpoints(r) {
   const bounds = roofBounds(r);
   const centerX = (bounds.minX + bounds.maxX) / 2;
   const centerY = (bounds.minY + bounds.maxY) / 2;
-  return roofRidgeAxis(r) === "x"
-    ? {
-        start: { x: bounds.minX, y: centerY },
-        end: { x: bounds.maxX, y: centerY },
-      }
-    : {
-        start: { x: centerX, y: bounds.minY },
-        end: { x: centerX, y: bounds.maxY },
-      };
+  const rotation = normalizeRoofRotation(r.Rotation);
+  if (rotation === 0)
+    return { start: { x: centerX, y: bounds.minY }, end: { x: centerX, y: bounds.maxY } };
+  if (rotation === 90)
+    return { start: { x: bounds.maxX, y: centerY }, end: { x: bounds.minX, y: centerY } };
+  if (rotation === 180)
+    return { start: { x: centerX, y: bounds.maxY }, end: { x: centerX, y: bounds.minY } };
+  return { start: { x: bounds.minX, y: centerY }, end: { x: bounds.maxX, y: centerY } };
 }
 function roofCrossWidth(r) {
   return roofRidgeAxis(r) === "x" ? roofHeight(r) : roofWidth(r);
@@ -120,6 +122,56 @@ function findInvalidRoofOverlap(items, changedIds = null) {
   }
   return null;
 }
+function roofRoot() {
+  return roofs.find((roof) => roof.RoofType === "multi" && roof.IsRoot) || null;
+}
+function nextRoofBlockName(items = roofs) {
+  let index = 1;
+  const names = new Set(items.map((roof) => roof.Name));
+  while (names.has(`Блок крыши ${index}`)) index++;
+  return `Блок крыши ${index}`;
+}
+function normalizeRoofHierarchy(items) {
+  const ids = new Set(items.map((roof) => roof.Id));
+  let rootSeen = false;
+  for (const roof of items) {
+    if (roof.RoofType === "single") {
+      roof.IsRoot = false;
+      roof.ParentId = null;
+      continue;
+    }
+    if (roof.RoofType === "concrete") {
+      roof.IsRoot = false;
+      if (roof.ParentId === roof.Id || !ids.has(roof.ParentId)) roof.ParentId = null;
+      continue;
+    }
+    if (roof.IsRoot && !rootSeen) {
+      rootSeen = true;
+      roof.ParentId = null;
+      roof.SlopeStart = normalizeRoofSlope(roof.SlopeStart);
+    } else {
+      roof.IsRoot = false;
+      roof.SlopeStart = normalizeRoofSlope(roof.SlopeStart, true);
+      if (roof.ParentId === roof.Id || !ids.has(roof.ParentId)) roof.ParentId = null;
+    }
+  }
+}
+function roofHierarchyIssue(items) {
+  const ids = new Set(items.map((roof) => roof.Id));
+  return items.find((roof) =>
+    (roof.RoofType === "concrete" || (roof.RoofType === "multi" && !roof.IsRoot)) &&
+    (!roof.ParentId || roof.ParentId === roof.Id || !ids.has(roof.ParentId))
+  ) || null;
+}
 function cleanRoofForStorage(r) { return { ...r }; }
-function cleanRoofForJSONExport(r) { return { ...r }; }
+function cleanRoofForJSONExport(r) {
+  const { IsRoot, ParentId, ...roof } = r;
+  return {
+    ...roof,
+    Root: r.RoofType === "multi" && IsRoot === true,
+    Parent: r.RoofType === "multi" || r.RoofType === "concrete"
+      ? normalizeRoofParentId(ParentId)
+      : null,
+  };
+}
 function newRoofId() { return "roof-" + (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`); }

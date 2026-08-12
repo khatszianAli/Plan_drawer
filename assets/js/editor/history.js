@@ -40,7 +40,10 @@ function restoreHistory(index, layer = activeLayer) {
   const history = layerHistories[layer];
   if (index < 0 || index >= history.length) return;
   layerHistoryIndexes[layer] = index;
-  if (layer === "roof") roofs = deepClone(history[index]).map(createRoof);
+  if (layer === "roof") {
+    roofs = deepClone(history[index]).map(createRoof);
+    normalizeRoofHierarchy(roofs);
+  }
   else walls = deepClone(history[index]).map(createWall);
   walls.forEach((w) => {
     w.Thickness = FIXED_WALL_THICKNESS;

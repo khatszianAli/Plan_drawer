@@ -313,6 +313,14 @@ $("multi-build-stage").addEventListener("change", (e) =>
 );
 $("roof-build-type").addEventListener("change", (e) => setRoofType(e.target.value));
 $("roof-slope-mode").addEventListener("change", updateRoofSlopePopupUI);
+$("prop-roof-type").addEventListener("change", () => {
+  const roof = selectedIds.size === 1 ? roofById([...selectedIds][0]) : null;
+  if (!roof) return;
+  updateRoofHierarchyFields({ ...roof, RoofType: normalizeRoofType($("prop-roof-type").value) });
+});
+$("prop-roof-root").addEventListener("change", (e) => {
+  $("prop-roof-parent-field").classList.toggle("hidden", e.target.value === "yes");
+});
 $("json-input").addEventListener("change", (e) =>
   importJSONFile(e.target.files[0]),
 );
