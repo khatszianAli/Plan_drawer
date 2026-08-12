@@ -423,9 +423,6 @@ function drawWallCollection(wallList, preview = false, options = {}) {
   }
   if (!reference) wallList.forEach((w) => drawWallLabel(w, preview));
 }
-function drawWall(w, preview = false) {
-  drawWallCollection([w], preview);
-}
 function drawSelection() {
   if (activeLayer === "roof") {
     if (selectedIds.size !== 1) return;

@@ -4,7 +4,6 @@
  * Shared DOM references, constants, and mutable application state.
  */
 
-"use strict";
 const $ = (id) => document.getElementById(id);
 const canvas = $("planCanvas");
 const ctx = canvas.getContext("2d");
@@ -96,7 +95,6 @@ const endpoint = (w, which) =>
 const wallById = (id) => walls.find((w) => w.Id === id);
 const roofById = (id) => roofs.find((r) => r.Id === id);
 const editableItems = () => (activeLayer === "roof" ? roofs : walls);
-const editableItemById = (id) => (activeLayer === "roof" ? roofById(id) : wallById(id));
 // Геометрическая модель стены. Координаты описывают ось между центрами
 // торцевых граней, а толщина формирует настоящий прямоугольник в миллиметрах.
 // Все привязки выполняются к физическим граням этого прямоугольника.

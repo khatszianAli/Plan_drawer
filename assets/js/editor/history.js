@@ -68,13 +68,6 @@ function updateHistoryButtons() {
   $("btn-undo").disabled = layerHistoryIndexes[layer] <= 0;
   $("btn-redo").disabled = layerHistoryIndexes[layer] >= layerHistories[layer].length - 1;
 }
-/*
- * Kept as a small compatibility boundary for old callers: history entries are
- * now scoped to the active layer, so a layer switch never crosses histories.
- */
-function legacyRestoreHistory(index) {
-  restoreHistory(index, activeLayer);
-}
 function normalizeIds() {
   const used = new Set();
   walls.forEach((w) => {

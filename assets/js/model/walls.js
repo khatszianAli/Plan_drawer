@@ -37,28 +37,6 @@ function setDefaultWallThickness() {
   updateBuildSettingsUI();
   scheduleAutosave();
 }
-function applyDefaultThicknessToAll() {
-  if (!walls.length)
-    return showModal(
-      "Толщина стен",
-      "На плане пока нет стен. Указанная толщина будет использоваться для новых стен.",
-    );
-  walls.forEach((w) => {
-    w.Thickness = FIXED_WALL_THICKNESS;
-  });
-  commitHistory();
-  updateSelectionUI();
-  draw();
-}
-function applySelectionThickness() {
-  if (!selectedIds.size) return;
-  walls.forEach((w) => {
-    if (selectedIds.has(w.Id)) w.Thickness = FIXED_WALL_THICKNESS;
-  });
-  commitHistory();
-  updateSelectionUI();
-  draw();
-}
 function createWall(raw = {}) {
   const sx = Number(raw.StartX);
   const sy = Number(raw.StartY);

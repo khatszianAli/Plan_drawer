@@ -299,4 +299,3 @@ function rotateSelectedRoof(direction) {
   updateSelectionUI();
   draw();
 }
-function setRoofPropertyForSelection(field, value) { roofs.forEach((r) => { if (selectedIds.has(r.Id)) r[field] = value; }); commitHistory(); updateSelectionUI(); draw(); }

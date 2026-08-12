@@ -57,19 +57,6 @@ function nearestSnapPoint(x, y, excludeIds = new Set()) {
   }
   return result;
 }
-function projectPointToWall(x, y, w) {
-  if (isHorizontal(w)) {
-    const min = Math.min(w.StartX, w.EndX),
-      max = Math.max(w.StartX, w.EndX);
-    return { x: clamp(x, min, max), y: w.StartY };
-  }
-  if (isVertical(w)) {
-    const min = Math.min(w.StartY, w.EndY),
-      max = Math.max(w.StartY, w.EndY);
-    return { x: w.StartX, y: clamp(y, min, max) };
-  }
-  return null;
-}
 function snapAxis(value, axis, excludeIds = new Set()) {
   const threshold = SNAP_SCREEN_PX / view.scale;
   let best = value;
