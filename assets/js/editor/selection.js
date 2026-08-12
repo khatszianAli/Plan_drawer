@@ -6,6 +6,36 @@
 
 function hitTest(clientX, clientY) {
   const p = screenToWorld(clientX, clientY);
+  if (activeLayer === "roof") {
+    if (selectedIds.size === 1) {
+      const selectedRoof = roofById([...selectedIds][0]);
+      if (selectedRoof) {
+        if (selectedRoof.RoofType === "multi") {
+          const ridge = roofRidgeEndpoints(selectedRoof);
+          for (const [end, point] of Object.entries(ridge)) {
+            const screen = worldToScreen(point.x, point.y);
+            if (Math.hypot(p.sx - screen.x, p.sy - screen.y) <= HANDLE_RADIUS + 6)
+              return { id: selectedRoof.Id, part: `roof-slope-${end}` };
+          }
+        }
+        const bounds = roofBounds(selectedRoof);
+        const corners = {
+          nw: { x: bounds.minX, y: bounds.minY },
+          ne: { x: bounds.maxX, y: bounds.minY },
+          se: { x: bounds.maxX, y: bounds.maxY },
+          sw: { x: bounds.minX, y: bounds.maxY },
+        };
+        for (const [corner, point] of Object.entries(corners)) {
+          const screen = worldToScreen(point.x, point.y);
+          if (Math.hypot(p.sx - screen.x, p.sy - screen.y) <= HANDLE_RADIUS + 5)
+            return { id: selectedRoof.Id, part: `roof-corner-${corner}` };
+        }
+      }
+    }
+    const tolerance = Math.max(4 / view.scale, 1);
+    for (let i = roofs.length - 1; i >= 0; i--) if (pointInsideRect(p.x, p.y, roofBounds(roofs[i]), tolerance)) return { id: roofs[i].Id, part: "roof" };
+    return null;
+  }
   if (selectedIds.size === 1) {
     const w = wallById([...selectedIds][0]);
     if (w) {
@@ -26,11 +56,13 @@ function hitTest(clientX, clientY) {
   return null;
 }
 function selectOnly(id) {
+  closeRoofSlopePopup();
   selectedIds = new Set(id ? [id] : []);
   updateSelectionUI();
   draw();
 }
 function toggleSelected(id) {
+  closeRoofSlopePopup();
   selectedIds.has(id) ? selectedIds.delete(id) : selectedIds.add(id);
   updateSelectionUI();
   draw();
@@ -276,6 +308,7 @@ function endWallDrag() {
   draw();
 }
 function startSelectionBox(p) {
+  closeRoofSlopePopup();
   selectionBox = {
     start: { x: p.sx, y: p.sy },
     end: { x: p.sx, y: p.sy },
@@ -290,8 +323,8 @@ function finishSelectionBox(additive) {
     y2 = Math.max(selectionBox.start.y, selectionBox.end.y);
   if (!additive) selectedIds.clear();
   if (Math.abs(x2 - x1) > 4 || Math.abs(y2 - y1) > 4) {
-    for (const w of walls) {
-      const r = wallBounds(w);
+    for (const w of editableItems()) {
+      const r = activeLayer === "roof" ? roofBounds(w) : wallBounds(w);
       const topLeft = worldToScreen(r.minX, r.minY);
       const bottomRight = worldToScreen(r.maxX, r.maxY);
       if (
@@ -309,7 +342,9 @@ function finishSelectionBox(additive) {
 }
 function deleteSelection() {
   if (!selectedIds.size) return;
-  walls = walls.filter((w) => !selectedIds.has(w.Id));
+  closeRoofSlopePopup();
+  if (activeLayer === "roof") roofs = roofs.filter((r) => !selectedIds.has(r.Id));
+  else walls = walls.filter((w) => !selectedIds.has(w.Id));
   selectedIds.clear();
   commitHistory();
   runValidation(false);
@@ -318,6 +353,12 @@ function deleteSelection() {
 }
 function duplicateSelection() {
   if (!selectedIds.size) return;
+  if (activeLayer === "roof") {
+    const copies = roofs.filter((r) => selectedIds.has(r.Id)).map((r) => ({ ...deepClone(r), Id: newRoofId(), Name: r.Name ? `${r.Name} — копия` : "", StartX: r.StartX + 200, EndX: r.EndX + 200, StartY: r.StartY + 200, EndY: r.EndY + 200 }));
+    const changedIds = new Set(copies.map((r) => r.Id));
+    if (findInvalidRoofOverlap([...roofs, ...copies], changedIds)) return showModal("Дублирование невозможно", "Копии блоков крыши создадут запрещённое пересечение.");
+    roofs.push(...copies); selectedIds = new Set(copies.map((r) => r.Id)); commitHistory(); updateSelectionUI(); draw(); return;
+  }
   const copies = walls
     .filter((w) => selectedIds.has(w.Id))
     .map((w) => ({
@@ -459,6 +500,9 @@ function setSelectionBuildStage(value) {
   draw();
 }
 function updateSelectionUI(updateInputs = true) {
+  if (activeLayer === "roof") return updateRoofSelectionUI(updateInputs);
+  $("properties-roof").classList.add("hidden");
+  $("properties-empty").textContent = "Выберите стену. Ctrl/⌘ + клик добавляет стены к выделению. Также можно протянуть рамку по пустому месту.";
   const count = selectedIds.size;
   $("selection-badge").textContent = count;
   $("status-selected").textContent = `Выбрано: ${count}`;
@@ -500,4 +544,22 @@ function updateSelectionUI(updateInputs = true) {
     }
   }
   $("status-count").textContent = `Стен: ${walls.length}`;
+}
+function updateRoofSelectionUI(updateInputs = true) {
+  const count = selectedIds.size;
+  $("selection-badge").textContent = count;
+  $("status-selected").textContent = `Выбрано: ${count}`;
+  $("properties-empty").classList.toggle("hidden", count !== 0);
+  $("properties-empty").textContent = "Выберите блок крыши или создайте новый блок.";
+  $("properties-single").classList.toggle("hidden", true);
+  $("properties-multi").classList.toggle("hidden", true);
+  $("properties-roof").classList.toggle("hidden", count !== 1);
+  if (count === 1 && updateInputs) {
+    const r = roofById([...selectedIds][0]); if (!r) return;
+    $("prop-roof-id").value = r.Id; $("prop-roof-name").value = r.Name || "";
+    $("prop-roof-sx").value = r.StartX; $("prop-roof-sy").value = r.StartY; $("prop-roof-ex").value = r.EndX; $("prop-roof-ey").value = r.EndY;
+    $("prop-roof-stage").value = buildStageInputValue(r.BuildStage); $("prop-roof-type").value = r.RoofType;
+    $("prop-roof-metric").textContent = `Размер: ${Math.round(roofWidth(r))} × ${Math.round(roofHeight(r))} мм`;
+  }
+  $("status-count").textContent = `Крыши: ${roofs.length}`;
 }

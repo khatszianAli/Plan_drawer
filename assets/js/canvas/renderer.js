@@ -11,6 +11,10 @@ function draw() {
   drawGrid();
   drawDrawingGuides();
   drawWallCollection(walls, false, { reference: activeLayer === "roof" });
+  if (activeLayer === "roof") {
+    drawRoofCollection(roofs, false);
+    drawRoofIntersections(roofs);
+  }
   drawMoveGuides();
   if (isDrawing && drawStart && drawCurrent) {
     drawWallCollection(
@@ -40,6 +44,7 @@ function draw() {
     ).map((w, index) => ({ ...w, Id: `shape-preview-${index}` }));
     drawWallCollection(previewWalls, true);
   }
+  if (roofDrag) drawRoofCollection([createRoof({ StartX: roofDrag.start.x, StartY: roofDrag.start.y, EndX: roofDrag.current.x, EndY: roofDrag.current.y, RoofType: roofType })], true);
   if (mode === "eraser") drawEraserPreview();
   drawSelection();
   drawSelectionBox();
@@ -422,6 +427,50 @@ function drawWall(w, preview = false) {
   drawWallCollection([w], preview);
 }
 function drawSelection() {
+  if (activeLayer === "roof") {
+    if (selectedIds.size !== 1) return;
+    const roof = roofById([...selectedIds][0]);
+    if (!roof) return;
+    const bounds = roofBounds(roof);
+    const corners = [
+      { x: bounds.minX, y: bounds.minY },
+      { x: bounds.maxX, y: bounds.minY },
+      { x: bounds.maxX, y: bounds.maxY },
+      { x: bounds.minX, y: bounds.maxY },
+    ];
+    ctx.save();
+    for (const point of corners) {
+      const screen = worldToScreen(point.x, point.y);
+      ctx.beginPath();
+      ctx.rect(
+        screen.x - HANDLE_RADIUS,
+        screen.y - HANDLE_RADIUS,
+        HANDLE_RADIUS * 2,
+        HANDLE_RADIUS * 2,
+      );
+      ctx.fillStyle = "#fff";
+      ctx.fill();
+      ctx.strokeStyle = "#2563eb";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+    if (roof.RoofType === "multi") {
+      const ridge = roofRidgeEndpoints(roof);
+      for (const [end, point] of Object.entries(ridge)) {
+        const slope = normalizeRoofSlope(end === "end" ? roof.SlopeEnd : roof.SlopeStart);
+        const screen = worldToScreen(point.x, point.y);
+        ctx.beginPath();
+        ctx.arc(screen.x, screen.y, HANDLE_RADIUS + 1, 0, Math.PI * 2);
+        ctx.fillStyle = slope.IsEditable ? "#fff" : "#0f766e";
+        ctx.fill();
+        ctx.strokeStyle = slope.IsEditable ? "#2563eb" : "#134e4a";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+    return;
+  }
   if (selectedIds.size !== 1) return;
   const w = wallById([...selectedIds][0]);
   if (!w) return;
@@ -437,6 +486,38 @@ function drawSelection() {
     ctx.stroke();
     ctx.restore();
   });
+}
+function drawRoofCollection(items, preview = false) {
+  for (const r of items) {
+    const b = roofBounds(r), a = worldToScreen(b.minX, b.minY), z = worldToScreen(b.maxX, b.maxY);
+    const x = Math.min(a.x, z.x), y = Math.min(a.y, z.y), w = Math.abs(z.x - a.x), h = Math.abs(z.y - a.y);
+    const concrete = r.RoofType === "concrete";
+    ctx.save(); ctx.globalAlpha = preview ? 0.42 : 0.58; ctx.fillStyle = preview ? (concrete ? "#9ca3af" : "#f59e0b") : (concrete ? "#cbd5e1" : "#fbbf24"); ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1;
+    ctx.strokeStyle = selectedIds.has(r.Id) && activeLayer === "roof" ? "#dc2626" : (concrete ? "#64748b" : "#b45309"); ctx.lineWidth = selectedIds.has(r.Id) ? 3 : 2; ctx.setLineDash([7, 4]); ctx.strokeRect(x, y, w, h); ctx.setLineDash([]); ctx.strokeStyle = concrete ? "#475569" : "#92400e"; ctx.fillStyle = concrete ? "#475569" : "#92400e"; ctx.lineWidth = 2;
+    if (r.RoofType === "multi") { ctx.beginPath(); if (roofRidgeAxis(r) === "x") { ctx.moveTo(x, y + h / 2); ctx.lineTo(x + w, y + h / 2); } else { ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w / 2, y + h); } ctx.stroke(); }
+    else if (r.RoofType === "single") { const sx = x + w / 2, sy = y + h / 2; const angle = (normalizeRoofRotation(r.Rotation) - 90) * Math.PI / 180; const distance = (Math.abs(Math.cos(angle)) * w + Math.abs(Math.sin(angle)) * h) * .28; const ex = sx + Math.cos(angle) * distance, ey = sy + Math.sin(angle) * distance; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.lineTo(ex - 9 * Math.cos(angle - .55), ey - 9 * Math.sin(angle - .55)); ctx.moveTo(ex, ey); ctx.lineTo(ex - 9 * Math.cos(angle + .55), ey - 9 * Math.sin(angle + .55)); ctx.stroke(); }
+    if (r.BuildStage) { ctx.font = "600 11px sans-serif"; ctx.fillText(`Этап ${r.BuildStage}`, x + 6, y + 14); }
+    ctx.restore();
+  }
+}
+function drawRoofIntersections(items) {
+  ctx.save();
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      const intersection = roofIntersection(items[i], items[j]);
+      if (!intersection || !roofOverlapAllowed(items[i], items[j])) continue;
+      const a = worldToScreen(intersection.minX, intersection.minY);
+      const b = worldToScreen(intersection.maxX, intersection.maxY);
+      const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
+      const width = Math.abs(b.x - a.x), height = Math.abs(b.y - a.y);
+      ctx.fillStyle = "rgba(13, 148, 136, 0.55)";
+      ctx.strokeStyle = "#0f766e";
+      ctx.lineWidth = 2;
+      ctx.fillRect(x, y, width, height);
+      ctx.strokeRect(x, y, width, height);
+    }
+  }
+  ctx.restore();
 }
 function drawSelectionBox() {
   if (!selectionBox) return;
@@ -478,5 +559,5 @@ function drawCalibration() {
 function updateStatus() {
   $("status-coords").textContent =
     `X: ${Math.round(mouseWorld.x)} мм · Y: ${Math.round(mouseWorld.y)} мм`;
-  $("status-count").textContent = `Стен: ${walls.length}`;
+  $("status-count").textContent = activeLayer === "roof" ? `Крыши: ${roofs.length}` : `Стен: ${walls.length}`;
 }

@@ -15,29 +15,33 @@ function cancelDrawing() {
     $("length-input").blur();
   }
 }
-function snapshot() {
-  return { walls: deepClone(walls) };
+function snapshot(layer = activeLayer) {
+  return layer === "roof" ? deepClone(roofs) : deepClone(walls);
 }
-function commitHistory() {
-  const state = snapshot();
+function commitHistory(layer = activeLayer) {
+  const history = layerHistories[layer];
+  const historyIndex = layerHistoryIndexes[layer];
+  const state = snapshot(layer);
   const current = history[historyIndex];
   if (current && JSON.stringify(current) === JSON.stringify(state)) return;
-  history = history.slice(0, historyIndex + 1);
-  history.push(state);
-  if (history.length > MAX_HISTORY) history.shift();
-  historyIndex = history.length - 1;
+  layerHistories[layer] = history.slice(0, historyIndex + 1);
+  layerHistories[layer].push(state);
+  if (layerHistories[layer].length > MAX_HISTORY) layerHistories[layer].shift();
+  layerHistoryIndexes[layer] = layerHistories[layer].length - 1;
   updateHistoryButtons();
   scheduleAutosave();
 }
 function initializeHistory() {
-  history = [snapshot()];
-  historyIndex = 0;
+  layerHistories = { walls: [snapshot("walls")], roof: [snapshot("roof")] };
+  layerHistoryIndexes = { walls: 0, roof: 0 };
   updateHistoryButtons();
 }
-function restoreHistory(index) {
+function restoreHistory(index, layer = activeLayer) {
+  const history = layerHistories[layer];
   if (index < 0 || index >= history.length) return;
-  historyIndex = index;
-  walls = deepClone(history[index].walls).map(createWall);
+  layerHistoryIndexes[layer] = index;
+  if (layer === "roof") roofs = deepClone(history[index]).map(createRoof);
+  else walls = deepClone(history[index]).map(createWall);
   walls.forEach((w) => {
     w.Thickness = FIXED_WALL_THICKNESS;
   });
@@ -52,19 +56,33 @@ function restoreHistory(index) {
   draw();
 }
 function undo() {
-  restoreHistory(historyIndex - 1);
+  const layer = activeLayer;
+  restoreHistory(layerHistoryIndexes[layer] - 1, layer);
 }
 function redo() {
-  restoreHistory(historyIndex + 1);
+  const layer = activeLayer;
+  restoreHistory(layerHistoryIndexes[layer] + 1, layer);
 }
 function updateHistoryButtons() {
-  $("btn-undo").disabled = historyIndex <= 0;
-  $("btn-redo").disabled = historyIndex >= history.length - 1;
+  const layer = activeLayer;
+  $("btn-undo").disabled = layerHistoryIndexes[layer] <= 0;
+  $("btn-redo").disabled = layerHistoryIndexes[layer] >= layerHistories[layer].length - 1;
+}
+/*
+ * Kept as a small compatibility boundary for old callers: history entries are
+ * now scoped to the active layer, so a layer switch never crosses histories.
+ */
+function legacyRestoreHistory(index) {
+  restoreHistory(index, activeLayer);
 }
 function normalizeIds() {
   const used = new Set();
   walls.forEach((w) => {
     if (!w.Id || used.has(w.Id)) w.Id = newId();
     used.add(w.Id);
+  });
+  roofs.forEach((r) => {
+    if (!r.Id || used.has(r.Id)) r.Id = newRoofId();
+    used.add(r.Id);
   });
 }

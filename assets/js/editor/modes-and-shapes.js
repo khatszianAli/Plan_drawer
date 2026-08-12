@@ -11,11 +11,9 @@ function updateModeUI() {
   $("btn-layer-walls").setAttribute("aria-pressed", String(!roofLayerActive));
   $("btn-layer-roof").setAttribute("aria-pressed", String(roofLayerActive));
   $("wall-tools")
-    .querySelectorAll("button")
-    .forEach((button) => (button.disabled = roofLayerActive));
-  $("wall-editing-tools")
-    .querySelectorAll("button")
-    .forEach((button) => (button.disabled = roofLayerActive));
+    .classList.toggle("hidden", roofLayerActive);
+  $("roof-tools").classList.toggle("hidden", !roofLayerActive);
+  $("btn-merge-selection").classList.toggle("hidden", roofLayerActive);
   $("btn-select").classList.toggle(
     "active",
     !roofLayerActive && mode === "select",
@@ -28,6 +26,9 @@ function updateModeUI() {
     "active",
     !roofLayerActive && mode === "draw-veranda",
   );
+  $("btn-roof-select").classList.toggle("active", roofLayerActive && mode === "roof-select");
+  $("btn-roof-rectangle").classList.toggle("active", roofLayerActive && mode === "roof-rectangle");
+  $("roof-build-type").value = roofType;
   $("btn-wall-toggle").textContent =
     activeWallType === "veranda" ? "Тип: веранда ↹" : "Тип: обычная ↹";
   workspace.classList.remove(
@@ -41,10 +42,10 @@ function updateModeUI() {
     ? "Слой: крыша"
     : "Слой: стены";
   if (roofLayerActive) {
-    workspace.classList.add(isPanning ? "pan-cursor" : "select-cursor");
-    $("status-mode").textContent = "Режим: просмотр крыши";
+    workspace.classList.add(isPanning ? "pan-cursor" : mode === "roof-rectangle" ? "draw-cursor" : "select-cursor");
+    $("status-mode").textContent = mode === "roof-rectangle" ? "Режим: блок крыши" : "Режим: выбор крыши";
     $("workspace-hint").textContent =
-      "Слой крыши. Стены показаны полупрозрачно как опорный план. ПКМ или Space + ЛКМ — перемещение холста. Колесо — масштаб.";
+      mode === "roof-rectangle" ? "Протяните границы блока крыши. Стены показаны полупрозрачно как опорный план." : "Выберите или перетащите блок крыши. Delete — удалить. Стены показаны как опорный план.";
     $("btn-bg-move").classList.remove("primary");
     return;
   }
@@ -76,7 +77,9 @@ function setActiveLayer(nextLayer) {
   const next = nextLayer === "roof" ? "roof" : "walls";
   if (activeLayer === next) return;
   cancelDrawing();
+  closeRoofSlopePopup();
   shapeDrag = null;
+  roofDrag = null;
   cancelLinearEraser();
   calibrationPoints = [];
   drag = null;
@@ -92,20 +95,25 @@ function setActiveLayer(nextLayer) {
       : "select";
   }
   activeLayer = next;
-  if (activeLayer === "roof") selectedIds.clear();
+  selectedIds.clear();
+  mode = activeLayer === "roof" ? "roof-select" : "select";
   updateSelectionUI();
+  updateHistoryButtons();
   updateModeUI();
   draw();
   scheduleAutosave();
 }
 function setMode(next) {
+  if (next.startsWith("roof-") && activeLayer !== "roof") return;
   if (next === "draw-normal") activeWallType = "normal";
   if (next === "draw-veranda") activeWallType = "veranda";
   if (mode === next && next === "background-move")
     next = previousMode === "background-move" ? "select" : previousMode;
   if (mode !== "calibrate" && mode !== "background-move") previousMode = mode;
   cancelDrawing();
+  closeRoofSlopePopup();
   shapeDrag = null;
+  roofDrag = null;
   cancelLinearEraser();
   calibrationPoints = [];
   mode = next;
@@ -113,6 +121,7 @@ function setMode(next) {
   updateModeUI();
   draw();
 }
+function setRoofType(value) { roofType = normalizeRoofType(value); updateModeUI(); scheduleAutosave(); draw(); }
 function toggleWallType() {
   activeWallType = activeWallType === "normal" ? "veranda" : "normal";
   if (mode === "draw-normal" || mode === "draw-veranda") {

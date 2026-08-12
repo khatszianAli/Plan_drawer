@@ -5,16 +5,17 @@
  */
 
 function fitSelection() {
-  const selected = walls.filter((w) => selectedIds.has(w.Id));
+  const selected = editableItems().filter((w) => selectedIds.has(w.Id));
   if (selected.length) fitWalls(selected);
 }
 function fitPlan() {
-  if (walls.length) fitWalls(walls);
+  const items = [...walls, ...roofs];
+  if (items.length) fitWalls(items);
   else resetView();
 }
 function fitWalls(items) {
   const size = canvasSize();
-  const rects = items.map((w) => wallBounds(w));
+  const rects = items.map((item) => item.RoofType ? roofBounds(item) : wallBounds(item));
   const minX = Math.min(...rects.map((r) => r.minX)),
     maxX = Math.max(...rects.map((r) => r.maxX));
   const minY = Math.min(...rects.map((r) => r.minY)),

@@ -5,9 +5,9 @@
  */
 
 function exportJSON() {
-  if (!walls.length)
-    return showModal("План пуст", "Сначала нарисуйте или импортируйте стены.");
-  const payload = { walls: walls.map(cleanWallForJSONExport) };
+  if (!walls.length && !roofs.length)
+    return showModal("План пуст", "Сначала добавьте стены или блоки крыши.");
+  const payload = { walls: walls.map(cleanWallForJSONExport), roofs: roofs.map(cleanRoofForJSONExport) };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: "application/json",
   });
@@ -40,11 +40,15 @@ async function importJSONFile(file) {
         );
       return wall;
     });
+    const importedRoofs = Array.isArray(parsed?.roofs) ? parsed.roofs.map(createRoof) : [];
+    const invalidRoofOverlap = findInvalidRoofOverlap(importedRoofs);
+    if (invalidRoofOverlap) throw new Error("Блоки крыши содержат запрещённое пересечение.");
     walls = imported;
+    roofs = importedRoofs;
     normalizeIds();
     removeExactDuplicates();
     selectedIds.clear();
-    commitHistory();
+    initializeHistory();
     runValidation(false);
     updateSelectionUI();
     fitPlan();
@@ -72,9 +76,10 @@ function saveToLocalStorage(showResult = false) {
       ? mode
       : previousMode;
     const data = {
-      version: 6,
+      version: 7,
       coordinateSystem: "y-down",
       walls: walls.map(cleanWallForStorage),
+      roofs: roofs.map(cleanRoofForStorage),
       view,
       settings: {
         drawingStepMM,
@@ -82,6 +87,7 @@ function saveToLocalStorage(showResult = false) {
         activeWallType,
         activeLayer,
         mode: persistedMode,
+        roofType,
       },
       background: {
         visible: background.visible,
@@ -140,8 +146,11 @@ function restoreAutosave() {
         ].includes(data.settings.mode)
       )
         mode = data.settings.mode;
+      roofType = normalizeRoofType(data.settings.roofType);
     }
     if (Array.isArray(data.walls)) walls = data.walls.map(createWall);
+    if (Array.isArray(data.roofs)) roofs = data.roofs.map(createRoof);
+    if (activeLayer === "roof") mode = "roof-select";
     const needsYAxisMigration = data.coordinateSystem !== "y-down";
     if (needsYAxisMigration) {
       walls.forEach((w) => {

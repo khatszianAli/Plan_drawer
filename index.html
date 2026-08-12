@@ -42,6 +42,16 @@
           </button>
         </div>
 
+        <div id="roof-tools" class="toolbar-group hidden" aria-label="Инструменты крыши">
+          <button id="btn-roof-select" class="btn active" data-mode="roof-select" title="Выбор блока крыши">↖ Выбор</button>
+          <button id="btn-roof-rectangle" class="btn" data-mode="roof-rectangle" title="Построить блок крыши">▭ Блок крыши</button>
+          <select id="roof-build-type" class="btn" title="Тип нового блока крыши" aria-label="Тип нового блока крыши">
+            <option value="multi">Многоскатная</option>
+            <option value="single">Односкатная</option>
+            <option value="concrete">Бетонная</option>
+          </select>
+        </div>
+
         <div
           id="wall-tools"
           class="toolbar-group"
@@ -103,6 +113,7 @@
             ↷
           </button>
           <button
+            id="btn-duplicate-selection"
             class="btn"
             data-action="duplicate-selection"
             title="Дублировать Ctrl+D"
@@ -110,6 +121,7 @@
             Дублировать
           </button>
           <button
+            id="btn-merge-selection"
             class="btn"
             data-action="merge-selection"
             title="Объединить совместимые стены"
@@ -164,6 +176,32 @@
               placeholder="например 5000"
             />
             <span class="muted">Enter</span>
+          </div>
+
+          <div id="roof-slope-popup" class="floating roof-slope-popup hidden">
+            <strong id="roof-slope-title">Свойства ската</strong>
+            <label class="field">
+              <span>Режим ската</span>
+              <select id="roof-slope-mode">
+                <option value="editable">Изменяемый</option>
+                <option value="fixed">Неизменяемый</option>
+              </select>
+            </label>
+            <label id="roof-slope-type-field" class="field hidden">
+              <span>Тип ската</span>
+              <select id="roof-slope-type">
+                <option value="gable">gable</option>
+                <option value="hip">hip</option>
+                <option value="hipWithVent">hipWithVent</option>
+                <option value="hipConnector">hipConnector</option>
+                <option value="innetHipconnector">innetHipconnector</option>
+                <option value="gableConnector">gableConnector</option>
+              </select>
+            </label>
+            <div class="row">
+              <button class="mini-btn primary flex-1" data-action="save-roof-slope">Сохранить</button>
+              <button class="mini-btn" data-action="close-roof-slope">Закрыть</button>
+            </div>
           </div>
 
           <div id="workspace-hint" class="floating hint">
@@ -373,6 +411,27 @@
                   Удалить
                 </button>
               </div>
+            </div>
+
+            <div id="properties-roof" class="panel-body hidden">
+              <label class="field"><span>ID</span><input id="prop-roof-id" disabled /></label>
+              <label class="field"><span>Название</span><input id="prop-roof-name" placeholder="Например: основная крыша" /></label>
+              <div class="grid2">
+                <label class="field"><span>StartX, мм</span><input id="prop-roof-sx" type="number" step="1" /></label>
+                <label class="field"><span>StartY, мм</span><input id="prop-roof-sy" type="number" step="1" /></label>
+                <label class="field"><span>EndX, мм</span><input id="prop-roof-ex" type="number" step="1" /></label>
+                <label class="field"><span>EndY, мм</span><input id="prop-roof-ey" type="number" step="1" /></label>
+              </div>
+              <div id="prop-roof-metric" class="metric">Размер: 0 × 0 мм</div>
+              <div class="grid2">
+                <label class="field"><span>Стадия</span><select id="prop-roof-stage"><option value="none">None</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select></label>
+                <label class="field"><span>Тип крыши</span><select id="prop-roof-type"><option value="multi">Многоскатная</option><option value="single">Односкатная</option><option value="concrete">Бетонная</option></select></label>
+              </div>
+              <div class="row mb-8">
+                <button class="mini-btn flex-1" data-action="rotate-roof" data-direction="left" title="Повернуть блок крыши на 90 градусов влево">↶ Повернуть влево</button>
+                <button class="mini-btn flex-1" data-action="rotate-roof" data-direction="right" title="Повернуть блок крыши на 90 градусов вправо">↷ Повернуть вправо</button>
+              </div>
+              <div class="row"><button class="mini-btn primary flex-1" data-action="save-roof-properties">Сохранить</button><button class="mini-btn danger" data-action="delete-selection">Удалить</button></div>
             </div>
           </section>
 
@@ -592,8 +651,10 @@
     <script defer src="assets/js/core/runtime.js"></script>
     <script defer src="assets/js/geometry/wall-geometry.js"></script>
     <script defer src="assets/js/model/walls.js"></script>
+    <script defer src="assets/js/model/roofs.js"></script>
     <script defer src="assets/js/canvas/coordinates.js"></script>
     <script defer src="assets/js/editor/modes-and-shapes.js"></script>
+    <script defer src="assets/js/editor/roofs.js"></script>
     <script defer src="assets/js/editor/eraser.js"></script>
     <script defer src="assets/js/editor/history.js"></script>
     <script defer src="assets/js/geometry/snapping.js"></script>
