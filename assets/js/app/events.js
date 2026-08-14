@@ -373,6 +373,7 @@ function bindUiActions() {
     "close-roof-slope": () => closeRoofSlopePopup(),
     "open-json-import": () => $("json-input").click(),
     "export-json": () => exportJSON(),
+    "export-roof-images": () => exportRoofImagePackage(),
     "fit-plan": () => fitPlan(),
     "confirm-clear": () => confirmClear(),
     "toggle-sidebar": () => toggleSidebar(),

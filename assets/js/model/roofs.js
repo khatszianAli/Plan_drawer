@@ -164,8 +164,18 @@ function roofHierarchyIssue(items) {
   ) || null;
 }
 function cleanRoofForStorage(r) { return { ...r }; }
-function cleanRoofForJSONExport(r) {
+function cleanRoofForJSONExport(r, slopeImages = null) {
   const { IsRoot, ParentId, ...roof } = r;
+  if (r.RoofType === "multi") {
+    if (!IsRoot) delete roof.SlopeStart;
+    for (const end of ["start", "end"]) {
+      const key = end === "start" ? "SlopeStart" : "SlopeEnd";
+      const image = slopeImages instanceof Map
+        ? slopeImages.get(`${r.Id}:${end}`)
+        : null;
+      if (roof[key] && image) roof[key] = { ...roof[key], Image: image };
+    }
+  }
   return {
     ...roof,
     Root: r.RoofType === "multi" && IsRoot === true,
