@@ -1,7 +1,7 @@
 "use strict";
 
 /**
- * Wall drawing chain, including the first wall starting at (0, 0).
+ * Wall drawing chain, including the first wall offset by half its thickness.
  */
 
 function startDrawingAt(p) {
@@ -24,7 +24,7 @@ function startDrawingAt(p) {
   drawCurrent = { ...drawStart };
   isDrawing = true;
   setSmartInput(
-    walls.length === 0 ? "Первая стена от (0, 0), мм:" : "Длина стены, мм:",
+    walls.length === 0 ? "Длина первой стены, мм:" : "Длина стены, мм:",
   );
 }
 function updateDrawingPreview(p) {
@@ -40,7 +40,11 @@ function updateDrawingPreview(p) {
   );
   drawStart = resolvedStart
     ? { x: resolvedStart.x, y: resolvedStart.y }
-    : { ...base };
+    : walls.length === 0
+      ? horizontal
+        ? { x: base.x, y: FIXED_WALL_THICKNESS / 2 }
+        : { x: FIXED_WALL_THICKNESS / 2, y: base.y }
+      : { ...base };
   let snapProbe;
   let steppedEnd;
   if (horizontal) {

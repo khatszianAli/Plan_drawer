@@ -40,7 +40,7 @@ assets/
   js/
     core/               состояние и константы
     geometry/           физическая геометрия и привязки
-    model/              модель стены
+    model/              модели стен и блоков крыши
     editor/             инструменты редактирования
     canvas/             координаты, viewport и renderer
     features/           подложка, импорт, экспорт, autosave

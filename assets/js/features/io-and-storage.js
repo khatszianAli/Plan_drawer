@@ -5,9 +5,15 @@
  */
 
 function exportJSON() {
-  if (!walls.length)
-    return showModal("План пуст", "Сначала нарисуйте или импортируйте стены.");
-  const payload = { walls: walls.map(cleanWallForJSONExport) };
+  if (!walls.length && !roofs.length)
+    return showModal("План пуст", "Сначала добавьте стены или блоки крыши.");
+  const hasMultiRoof = roofs.some((roof) => roof.RoofType === "multi");
+  if (hasMultiRoof && !roofRoot())
+    return showModal("Нет root-крыши", "Для экспорта JSON назначьте один многоскатный блок крыши как root.");
+  const hierarchyIssue = roofHierarchyIssue(roofs);
+  if (hierarchyIssue)
+    return showModal("Не указан parent", `Укажите parent для блока крыши «${hierarchyIssue.Name || hierarchyIssue.Id}».`);
+  const payload = { walls: walls.map(cleanWallForJSONExport), roofs: roofs.map(cleanRoofForJSONExport) };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: "application/json",
   });
@@ -40,11 +46,21 @@ async function importJSONFile(file) {
         );
       return wall;
     });
+    const importedRoofs = Array.isArray(parsed?.roofs) ? parsed.roofs.map(createRoof) : [];
+    if (importedRoofs.filter((roof) => roof.RoofType === "multi" && roof.IsRoot).length > 1)
+      throw new Error("В импортируемом плане может быть только одна root-крыша.");
+    normalizeRoofHierarchy(importedRoofs);
+    const hierarchyIssue = roofHierarchyIssue(importedRoofs);
+    if (hierarchyIssue)
+      throw new Error(`Для блока крыши «${hierarchyIssue.Name || hierarchyIssue.Id}» не указан корректный parent.`);
+    const invalidRoofOverlap = findInvalidRoofOverlap(importedRoofs);
+    if (invalidRoofOverlap) throw new Error("Блоки крыши содержат запрещённое пересечение.");
     walls = imported;
+    roofs = importedRoofs;
     normalizeIds();
     removeExactDuplicates();
     selectedIds.clear();
-    commitHistory();
+    initializeHistory();
     runValidation(false);
     updateSelectionUI();
     fitPlan();
@@ -72,15 +88,18 @@ function saveToLocalStorage(showResult = false) {
       ? mode
       : previousMode;
     const data = {
-      version: 6,
+      version: 7,
       coordinateSystem: "y-down",
       walls: walls.map(cleanWallForStorage),
+      roofs: roofs.map(cleanRoofForStorage),
       view,
       settings: {
         drawingStepMM,
         defaultWallThickness: FIXED_WALL_THICKNESS,
         activeWallType,
+        activeLayer,
         mode: persistedMode,
+        roofType,
       },
       background: {
         visible: background.visible,
@@ -130,6 +149,7 @@ function restoreAutosave() {
       defaultWallThickness = FIXED_WALL_THICKNESS;
       activeWallType =
         data.settings.activeWallType === "veranda" ? "veranda" : "normal";
+      activeLayer = data.settings.activeLayer === "roof" ? "roof" : "walls";
       if (
         [
           "select",
@@ -138,8 +158,12 @@ function restoreAutosave() {
         ].includes(data.settings.mode)
       )
         mode = data.settings.mode;
+      roofType = normalizeRoofType(data.settings.roofType);
     }
     if (Array.isArray(data.walls)) walls = data.walls.map(createWall);
+    if (Array.isArray(data.roofs)) roofs = data.roofs.map(createRoof);
+    normalizeRoofHierarchy(roofs);
+    if (activeLayer === "roof") mode = "roof-select";
     const needsYAxisMigration = data.coordinateSystem !== "y-down";
     if (needsYAxisMigration) {
       walls.forEach((w) => {

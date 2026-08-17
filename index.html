@@ -23,7 +23,41 @@
     <div class="app">
       <!-- Primary editor toolbar -->
       <header class="toolbar" aria-label="Инструменты редактора">
-        <div class="toolbar-group" aria-label="Инструменты стен">
+        <div class="toolbar-group" aria-label="Рабочий слой">
+          <button
+            id="btn-layer-walls"
+            class="btn active"
+            data-layer="walls"
+            title="Перейти к стенам"
+          >
+            Стены
+          </button>
+          <button
+            id="btn-layer-roof"
+            class="btn"
+            data-layer="roof"
+            title="Перейти к крыше"
+          >
+            Крыша
+          </button>
+        </div>
+
+        <div id="roof-tools" class="toolbar-group hidden" aria-label="Инструменты крыши">
+          <button id="btn-roof-select" class="btn active" data-mode="roof-select" title="Выбор блока крыши">↖ Выбор</button>
+          <button id="btn-roof-rectangle" class="btn" data-mode="roof-rectangle" title="Построить блок крыши">▭ Блок крыши</button>
+          <select id="roof-build-type" class="btn" title="Тип нового блока крыши" aria-label="Тип нового блока крыши">
+            <option value="multi">Многоскатная</option>
+            <option value="single">Односкатная</option>
+            <option value="concrete">Бетонная</option>
+          </select>
+          <button class="btn success" data-action="export-roof-images" title="Сформировать JSON и изображения скатов">▣ Изображения</button>
+        </div>
+
+        <div
+          id="wall-tools"
+          class="toolbar-group"
+          aria-label="Инструменты стен"
+        >
           <button
             id="btn-select"
             class="btn"
@@ -58,7 +92,11 @@
           </button>
         </div>
 
-        <div class="toolbar-group" aria-label="Редактирование">
+        <div
+          id="wall-editing-tools"
+          class="toolbar-group"
+          aria-label="Редактирование стен"
+        >
           <button
             id="btn-undo"
             class="btn icon"
@@ -76,6 +114,7 @@
             ↷
           </button>
           <button
+            id="btn-duplicate-selection"
             class="btn"
             data-action="duplicate-selection"
             title="Дублировать Ctrl+D"
@@ -83,6 +122,7 @@
             Дублировать
           </button>
           <button
+            id="btn-merge-selection"
             class="btn"
             data-action="merge-selection"
             title="Объединить совместимые стены"
@@ -137,6 +177,32 @@
               placeholder="например 5000"
             />
             <span class="muted">Enter</span>
+          </div>
+
+          <div id="roof-slope-popup" class="floating roof-slope-popup hidden">
+            <strong id="roof-slope-title">Свойства ската</strong>
+            <label class="field">
+              <span>Режим ската</span>
+              <select id="roof-slope-mode">
+                <option value="editable">Изменяемый</option>
+                <option value="fixed">Неизменяемый</option>
+              </select>
+            </label>
+            <label id="roof-slope-type-field" class="field hidden">
+              <span>Тип ската</span>
+              <select id="roof-slope-type">
+                <option value="gable">gable</option>
+                <option value="hip">hip</option>
+                <option value="hipWithVent">hipWithVent</option>
+                <option value="hipConnector">hipConnector</option>
+                <option value="innetHipconnector">innetHipconnector</option>
+                <option value="gableConnector">gableConnector</option>
+              </select>
+            </label>
+            <div class="row">
+              <button class="mini-btn primary flex-1" data-action="save-roof-slope">Сохранить</button>
+              <button class="mini-btn" data-action="close-roof-slope">Закрыть</button>
+            </div>
           </div>
 
           <div id="workspace-hint" class="floating hint">
@@ -271,6 +337,8 @@
                     <option value="4">4</option>
                     <option value="5">5</option>
                     <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
                   </select>
                 </label>
               </div>
@@ -334,6 +402,8 @@
                   <option value="4">4</option>
                   <option value="5">5</option>
                   <option value="6">6</option>
+                  <option value="7">7</option>
+                  <option value="8">8</option>
                 </select>
               </label>
 
@@ -342,6 +412,31 @@
                   Удалить
                 </button>
               </div>
+            </div>
+
+            <div id="properties-roof" class="panel-body hidden">
+              <label class="field"><span>ID</span><input id="prop-roof-id" disabled /></label>
+              <label class="field"><span>Название</span><input id="prop-roof-name" placeholder="Например: основная крыша" /></label>
+              <div class="grid2">
+                <label class="field"><span>StartX, мм</span><input id="prop-roof-sx" type="number" step="1" /></label>
+                <label class="field"><span>StartY, мм</span><input id="prop-roof-sy" type="number" step="1" /></label>
+                <label class="field"><span>EndX, мм</span><input id="prop-roof-ex" type="number" step="1" /></label>
+                <label class="field"><span>EndY, мм</span><input id="prop-roof-ey" type="number" step="1" /></label>
+              </div>
+              <div id="prop-roof-hierarchy" class="grid2 hidden">
+                <label id="prop-roof-root-field" class="field"><span>Root</span><select id="prop-roof-root"><option value="no">Нет</option><option value="yes">Да</option></select></label>
+                <label id="prop-roof-parent-field" class="field"><span>Parent</span><select id="prop-roof-parent"><option value="">Выберите parent</option></select></label>
+              </div>
+              <div id="prop-roof-metric" class="metric">Размер: 0 × 0 мм</div>
+              <div class="grid2">
+                <label class="field"><span>Стадия</span><select id="prop-roof-stage"><option value="none">None</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></select></label>
+                <label class="field"><span>Тип крыши</span><select id="prop-roof-type"><option value="multi">Многоскатная</option><option value="single">Односкатная</option><option value="concrete">Бетонная</option></select></label>
+              </div>
+              <div class="row mb-8">
+                <button class="mini-btn flex-1" data-action="rotate-roof" data-direction="left" title="Повернуть блок крыши на 90 градусов влево">↶ Повернуть влево</button>
+                <button class="mini-btn flex-1" data-action="rotate-roof" data-direction="right" title="Повернуть блок крыши на 90 градусов вправо">↷ Повернуть вправо</button>
+              </div>
+              <div class="row"><button class="mini-btn primary flex-1" data-action="save-roof-properties">Сохранить</button><button class="mini-btn danger" data-action="delete-selection">Удалить</button></div>
             </div>
           </section>
 
@@ -514,7 +609,7 @@
             </div>
             <div class="panel-body">
               <p class="muted mt-0">
-                Стены и настройки сохраняются в браузере после каждого
+                Стены, крыши и настройки сохраняются в браузере после каждого
                 изменения. Большие изображения-подложки могут не сохраняться.
               </p>
               <div class="row">
@@ -534,6 +629,7 @@
         <span id="status-coords">X: 0 мм · Y: 0 мм</span>
         <span id="status-count">Стен: 0</span>
         <span id="status-selected">Выбрано: 0</span>
+        <span id="status-layer">Слой: стены</span>
         <span id="status-mode">Режим: стена</span>
         <span id="status-save">Не сохранено</span>
       </footer>
@@ -560,8 +656,10 @@
     <script defer src="assets/js/core/runtime.js"></script>
     <script defer src="assets/js/geometry/wall-geometry.js"></script>
     <script defer src="assets/js/model/walls.js"></script>
+    <script defer src="assets/js/model/roofs.js"></script>
     <script defer src="assets/js/canvas/coordinates.js"></script>
     <script defer src="assets/js/editor/modes-and-shapes.js"></script>
+    <script defer src="assets/js/editor/roofs.js"></script>
     <script defer src="assets/js/editor/eraser.js"></script>
     <script defer src="assets/js/editor/history.js"></script>
     <script defer src="assets/js/geometry/snapping.js"></script>
@@ -570,6 +668,7 @@
     <script defer src="assets/js/editor/validation.js"></script>
     <script defer src="assets/js/canvas/viewport.js"></script>
     <script defer src="assets/js/features/background.js"></script>
+    <script defer src="assets/js/features/roof-image-export.js"></script>
     <script defer src="assets/js/features/io-and-storage.js"></script>
     <script defer src="assets/js/ui/modal.js"></script>
     <script defer src="assets/js/canvas/renderer.js"></script>

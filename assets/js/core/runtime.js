@@ -4,7 +4,6 @@
  * Shared DOM references, constants, and mutable application state.
  */
 
-"use strict";
 const $ = (id) => document.getElementById(id);
 const canvas = $("planCanvas");
 const ctx = canvas.getContext("2d");
@@ -21,15 +20,21 @@ const MIN_BACKGROUND_SIZE_MM = 50;
 const MAX_HISTORY = 100;
 const FIXED_WALL_THICKNESS = 150;
 const DEFAULT_DRAWING_STEP_MM = 100;
+const ROOF_MOVE_STEP_MM = 10;
 const MOVE_GUIDE_ORTH_SCREEN_PX = 280;
 let walls = [];
+let roofs = [];
 let selectedIds = new Set();
 let drawingStepMM = DEFAULT_DRAWING_STEP_MM;
 let defaultWallThickness = FIXED_WALL_THICKNESS;
+let activeLayer = "walls";
 let mode = "draw-normal";
 let previousMode = "draw-normal";
 let activeWallType = "normal";
+let roofType = "multi";
 let shapeDrag = null;
+let roofDrag = null;
+let activeRoofSlopeEditor = null;
 let eraserDrawing = false;
 let eraserStart = null;
 let eraserCurrent = null;
@@ -51,8 +56,8 @@ let selectionBox = null;
 let spacePressed = false;
 let mouseWorld = { x: 0, y: 0 };
 let view = { scale: 0.16, originX: 50, originY: 50 };
-let history = [];
-let historyIndex = -1;
+let layerHistories = { walls: [], roof: [] };
+let layerHistoryIndexes = { walls: -1, roof: -1 };
 let validationIssues = [];
 let invalidWallIds = new Set();
 let autosaveTimer = null;
@@ -72,6 +77,8 @@ let background = {
 };
 const deepClone = (value) => JSON.parse(JSON.stringify(value));
 const roundStep = (value) => Math.round(value / drawingStepMM) * drawingStepMM;
+const roundRoofMoveStep = (value) =>
+  Math.round(value / ROOF_MOVE_STEP_MM) * ROOF_MOVE_STEP_MM;
 const nearlyEqual = (a, b, eps = 0.001) => Math.abs(a - b) <= eps;
 const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 const newId = () =>
@@ -86,6 +93,8 @@ const isAxisAligned = (w) => isHorizontal(w) || isVertical(w);
 const endpoint = (w, which) =>
   which === "start" ? { x: w.StartX, y: w.StartY } : { x: w.EndX, y: w.EndY };
 const wallById = (id) => walls.find((w) => w.Id === id);
+const roofById = (id) => roofs.find((r) => r.Id === id);
+const editableItems = () => (activeLayer === "roof" ? roofs : walls);
 // Геометрическая модель стены. Координаты описывают ось между центрами
 // торцевых граней, а толщина формирует настоящий прямоугольник в миллиметрах.
 // Все привязки выполняются к физическим граням этого прямоугольника.

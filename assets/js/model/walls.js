@@ -10,7 +10,7 @@ function normalizePositiveInteger(value, fallback = 1) {
 }
 function normalizeBuildStage(value) {
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 6
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 8
     ? parsed
     : null;
 }
@@ -36,28 +36,6 @@ function setDefaultWallThickness() {
   });
   updateBuildSettingsUI();
   scheduleAutosave();
-}
-function applyDefaultThicknessToAll() {
-  if (!walls.length)
-    return showModal(
-      "Толщина стен",
-      "На плане пока нет стен. Указанная толщина будет использоваться для новых стен.",
-    );
-  walls.forEach((w) => {
-    w.Thickness = FIXED_WALL_THICKNESS;
-  });
-  commitHistory();
-  updateSelectionUI();
-  draw();
-}
-function applySelectionThickness() {
-  if (!selectedIds.size) return;
-  walls.forEach((w) => {
-    if (selectedIds.has(w.Id)) w.Thickness = FIXED_WALL_THICKNESS;
-  });
-  commitHistory();
-  updateSelectionUI();
-  draw();
 }
 function createWall(raw = {}) {
   const sx = Number(raw.StartX);

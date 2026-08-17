@@ -7,6 +7,10 @@ canvas.addEventListener("mousedown", (e) => {
   mouseWorld = p;
   mouseScreen = { x: p.sx, y: p.sy };
   if (e.button === 2 || e.button === 1 || (spacePressed && e.button === 0)) {
+    if (e.button === 2 && isDrawing) {
+      cancelDrawing();
+      draw();
+    }
     isPanning = true;
     panStart = {
       clientX: e.clientX,
@@ -23,6 +27,8 @@ canvas.addEventListener("mousedown", (e) => {
     addCalibrationPoint(p);
     return;
   }
+  if (activeLayer === "roof" && mode === "roof-rectangle") { startRoofRectangle(p); draw(); return; }
+  if (activeLayer === "roof" && mode === "roof-select") { const hit = hitTest(e.clientX, e.clientY); if (hit) { if (e.ctrlKey || e.metaKey) toggleSelected(hit.id); else { if (!selectedIds.has(hit.id)) selectedIds = new Set([hit.id]); beginRoofDrag(hit, p); } } else { startSelectionBox(p); selectionBox.additive = e.ctrlKey || e.metaKey; } return; }
   if (mode === "eraser") {
     if (!eraserDrawing) startLinearEraserAt(p);
     else commitLinearErase(null);
@@ -96,6 +102,7 @@ canvas.addEventListener("mousemove", (e) => {
     draw();
     return;
   }
+  if (roofDrag) { roofDrag.current = normalizedRoofEnd(roofDrag.start, p); draw(); return; }
   if (drag?.type === "background-resize") {
     updateBackgroundResize(p);
     return;
@@ -109,6 +116,8 @@ canvas.addEventListener("mousemove", (e) => {
     draw();
     return;
   }
+  if (drag && drag.type === "roofs") { updateRoofDrag(p); return; }
+  if (drag && drag.type === "roof-resize") { updateRoofResize(p); return; }
   if (drag) {
     updateWallDrag(p);
     return;
@@ -126,6 +135,7 @@ canvas.addEventListener("mouseup", (e) => {
     commitShape();
     return;
   }
+  if (roofDrag) { commitRoofRectangle(); return; }
   if (isPanning) {
     isPanning = false;
     panStart = null;
@@ -145,7 +155,8 @@ canvas.addEventListener("mouseup", (e) => {
     draw();
     return;
   }
-  if (drag) endWallDrag();
+  if (drag && (drag.type === "roofs" || drag.type === "roof-resize")) endRoofDrag();
+  else if (drag) endWallDrag();
   if (selectionBox) finishSelectionBox(selectionBox.additive);
 });
 canvas.addEventListener("mouseleave", () => {
@@ -155,14 +166,14 @@ canvas.addEventListener("mouseleave", () => {
     updateModeUI();
   }
   if (drag && drag.type !== "background" && drag.type !== "background-resize")
-    endWallDrag();
+    (drag.type === "roofs" || drag.type === "roof-resize") ? endRoofDrag() : endWallDrag();
 });
 canvas.addEventListener("dblclick", (e) => {
-  if (mode !== "select") return;
+  if (mode !== "select" && mode !== "roof-select") return;
   const hit = hitTest(e.clientX, e.clientY);
   if (hit) {
     selectOnly(hit.id);
-    $("prop-name").focus();
+    if (activeLayer === "walls") $("prop-name").focus();
   }
 });
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -182,6 +193,33 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space" && !editing) {
     spacePressed = true;
     e.preventDefault();
+  }
+  if (activeLayer === "roof") {
+    const roofCtrl = e.ctrlKey || e.metaKey;
+    if (roofCtrl && e.key.toLowerCase() === "z") { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+    if (roofCtrl && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
+    if (roofCtrl && e.key.toLowerCase() === "d" && !editing) { e.preventDefault(); duplicateSelection(); return; }
+    if (!editing) {
+      const roofNudges = {
+        ArrowUp: [0, -ROOF_MOVE_STEP_MM],
+        KeyW: [0, -ROOF_MOVE_STEP_MM],
+        ArrowDown: [0, ROOF_MOVE_STEP_MM],
+        KeyS: [0, ROOF_MOVE_STEP_MM],
+        ArrowLeft: [-ROOF_MOVE_STEP_MM, 0],
+        KeyA: [-ROOF_MOVE_STEP_MM, 0],
+        ArrowRight: [ROOF_MOVE_STEP_MM, 0],
+        KeyD: [ROOF_MOVE_STEP_MM, 0],
+      };
+      const nudge = roofNudges[e.code];
+      if (nudge) {
+        e.preventDefault();
+        nudgeSelectedRoofs(nudge[0], nudge[1]);
+        return;
+      }
+    }
+    if (e.key === "Escape") { roofDrag = null; setMode("roof-select"); return; }
+    if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteSelection(); }
+    return;
   }
   const ctrl = e.ctrlKey || e.metaKey;
   if (ctrl && e.key.toLowerCase() === "z") {
@@ -273,6 +311,16 @@ $("default-thickness").addEventListener("blur", (e) =>
 $("multi-build-stage").addEventListener("change", (e) =>
   setSelectionBuildStage(e.target.value),
 );
+$("roof-build-type").addEventListener("change", (e) => setRoofType(e.target.value));
+$("roof-slope-mode").addEventListener("change", updateRoofSlopePopupUI);
+$("prop-roof-type").addEventListener("change", () => {
+  const roof = selectedIds.size === 1 ? roofById([...selectedIds][0]) : null;
+  if (!roof) return;
+  updateRoofHierarchyFields({ ...roof, RoofType: normalizeRoofType($("prop-roof-type").value) });
+});
+$("prop-roof-root").addEventListener("change", (e) => {
+  $("prop-roof-parent-field").classList.toggle("hidden", e.target.value === "yes");
+});
 $("json-input").addEventListener("change", (e) =>
   importJSONFile(e.target.files[0]),
 );
@@ -303,6 +351,12 @@ $("modal-backdrop").addEventListener("mousedown", (e) => {
 
 /** Bind declarative buttons from index.html. */
 function bindUiActions() {
+  document.querySelectorAll("[data-layer]").forEach((element) => {
+    element.addEventListener("click", () =>
+      setActiveLayer(element.dataset.layer),
+    );
+  });
+
   document.querySelectorAll("[data-mode]").forEach((element) => {
     element.addEventListener("click", () => setMode(element.dataset.mode));
   });
@@ -313,8 +367,13 @@ function bindUiActions() {
     redo: () => redo(),
     "duplicate-selection": () => duplicateSelection(),
     "merge-selection": () => mergeSelectedWalls(),
+    "rotate-roof": (element) => rotateSelectedRoof(element.dataset.direction),
+    "save-roof-properties": () => applyRoofProperties(),
+    "save-roof-slope": () => saveRoofSlopeProperties(),
+    "close-roof-slope": () => closeRoofSlopePopup(),
     "open-json-import": () => $("json-input").click(),
     "export-json": () => exportJSON(),
+    "export-roof-images": () => exportRoofImagePackage(),
     "fit-plan": () => fitPlan(),
     "confirm-clear": () => confirmClear(),
     "toggle-sidebar": () => toggleSidebar(),

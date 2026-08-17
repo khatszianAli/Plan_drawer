@@ -5,9 +5,30 @@
  */
 
 function updateModeUI() {
-  $("btn-select").classList.toggle("active", mode === "select");
-  $("btn-normal").classList.toggle("active", mode === "draw-normal");
-  $("btn-veranda").classList.toggle("active", mode === "draw-veranda");
+  const roofLayerActive = activeLayer === "roof";
+  $("btn-layer-walls").classList.toggle("active", !roofLayerActive);
+  $("btn-layer-roof").classList.toggle("active", roofLayerActive);
+  $("btn-layer-walls").setAttribute("aria-pressed", String(!roofLayerActive));
+  $("btn-layer-roof").setAttribute("aria-pressed", String(roofLayerActive));
+  $("wall-tools")
+    .classList.toggle("hidden", roofLayerActive);
+  $("roof-tools").classList.toggle("hidden", !roofLayerActive);
+  $("btn-merge-selection").classList.toggle("hidden", roofLayerActive);
+  $("btn-select").classList.toggle(
+    "active",
+    !roofLayerActive && mode === "select",
+  );
+  $("btn-normal").classList.toggle(
+    "active",
+    !roofLayerActive && mode === "draw-normal",
+  );
+  $("btn-veranda").classList.toggle(
+    "active",
+    !roofLayerActive && mode === "draw-veranda",
+  );
+  $("btn-roof-select").classList.toggle("active", roofLayerActive && mode === "roof-select");
+  $("btn-roof-rectangle").classList.toggle("active", roofLayerActive && mode === "roof-rectangle");
+  $("roof-build-type").value = roofType;
   $("btn-wall-toggle").textContent =
     activeWallType === "veranda" ? "Тип: веранда ↹" : "Тип: обычная ↹";
   workspace.classList.remove(
@@ -17,6 +38,17 @@ function updateModeUI() {
     "calibrate-cursor",
     "eraser-cursor",
   );
+  $("status-layer").textContent = roofLayerActive
+    ? "Слой: крыша"
+    : "Слой: стены";
+  if (roofLayerActive) {
+    workspace.classList.add(isPanning ? "pan-cursor" : mode === "roof-rectangle" ? "draw-cursor" : "select-cursor");
+    $("status-mode").textContent = mode === "roof-rectangle" ? "Режим: блок крыши" : "Режим: выбор крыши";
+    $("workspace-hint").textContent =
+      mode === "roof-rectangle" ? "Протяните границы блока крыши. Стены показаны полупрозрачно как опорный план." : "Выберите или перетащите блок крыши. Delete — удалить. Стены показаны как опорный план.";
+    $("btn-bg-move").classList.remove("primary");
+    return;
+  }
   if (isPanning) workspace.classList.add("pan-cursor");
   else if (mode === "calibrate") workspace.classList.add("calibrate-cursor");
   else if (mode === "eraser") workspace.classList.add("eraser-cursor");
@@ -41,14 +73,47 @@ function updateModeUI() {
           ? "Перетащите подложку мышкой. Потяните за синий угловой маркер, чтобы изменить размер. Повторно нажмите кнопку для выхода."
           : "ЛКМ — рисование физической стены 150 мм. Первая обычная стена или стена веранды всегда начинается в координате (0, 0). При повороте координаты автоматически смещаются к граням на 75 мм, поэтому стены не входят друг в друга. Tab — сменить тип стены. Esc — завершить цепочку.";
 }
+function setActiveLayer(nextLayer) {
+  const next = nextLayer === "roof" ? "roof" : "walls";
+  if (activeLayer === next) return;
+  cancelDrawing();
+  closeRoofSlopePopup();
+  shapeDrag = null;
+  roofDrag = null;
+  cancelLinearEraser();
+  calibrationPoints = [];
+  drag = null;
+  selectionBox = null;
+  activeMoveGuides = { x: null, y: null };
+  background.moveMode = false;
+  if (
+    next === "roof" &&
+    (mode === "calibrate" || mode === "background-move")
+  ) {
+    mode = ["select", "draw-normal", "draw-veranda"].includes(previousMode)
+      ? previousMode
+      : "select";
+  }
+  activeLayer = next;
+  selectedIds.clear();
+  mode = activeLayer === "roof" ? "roof-select" : "select";
+  updateSelectionUI();
+  updateHistoryButtons();
+  updateModeUI();
+  draw();
+  scheduleAutosave();
+}
 function setMode(next) {
+  if (next.startsWith("roof-") && activeLayer !== "roof") return;
   if (next === "draw-normal") activeWallType = "normal";
   if (next === "draw-veranda") activeWallType = "veranda";
   if (mode === next && next === "background-move")
     next = previousMode === "background-move" ? "select" : previousMode;
   if (mode !== "calibrate" && mode !== "background-move") previousMode = mode;
   cancelDrawing();
+  closeRoofSlopePopup();
   shapeDrag = null;
+  roofDrag = null;
   cancelLinearEraser();
   calibrationPoints = [];
   mode = next;
@@ -56,6 +121,7 @@ function setMode(next) {
   updateModeUI();
   draw();
 }
+function setRoofType(value) { roofType = normalizeRoofType(value); updateModeUI(); scheduleAutosave(); draw(); }
 function toggleWallType() {
   activeWallType = activeWallType === "normal" ? "veranda" : "normal";
   if (mode === "draw-normal" || mode === "draw-veranda") {

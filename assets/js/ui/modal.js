@@ -5,16 +5,20 @@
  */
 
 function confirmClear() {
+  const clearingRoof = activeLayer === "roof";
   showModal(
-    "Очистить план?",
-    "Все стены будут удалены. Действие можно отменить через Ctrl+Z.",
+    clearingRoof ? "Очистить слой крыши?" : "Очистить слой стен?",
+    clearingRoof
+      ? "Все блоки крыши будут удалены. Действие можно отменить через Ctrl+Z."
+      : "Все стены будут удалены. Действие можно отменить через Ctrl+Z.",
     [
       { label: "Отмена" },
       {
         label: "Очистить",
         className: "danger",
         action: () => {
-          walls = [];
+          if (clearingRoof) roofs = [];
+          else walls = [];
           selectedIds.clear();
           commitHistory();
           runValidation(false);

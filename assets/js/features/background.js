@@ -241,6 +241,7 @@ function updateBackgroundResize(p) {
   draw();
 }
 function toggleBackgroundMove() {
+  if (activeLayer === "roof") return;
   if (!background.img)
     return showModal("Нет подложки", "Сначала загрузите изображение плана.");
   setMode(
@@ -248,6 +249,7 @@ function toggleBackgroundMove() {
   );
 }
 function startCalibration() {
+  if (activeLayer === "roof") return;
   if (!background.img)
     return showModal("Нет подложки", "Сначала загрузите изображение плана.");
   previousMode = mode === "calibrate" ? "select" : mode;
